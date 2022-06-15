@@ -10,11 +10,11 @@ class OrnsteinUhlenbeck(StochasticProcess):
     https://en.wikipedia.org/wiki/Ornstein%E2%80%93Uhlenbeck_process
     """
 
-    __slots__ = ("sigma_", "theta_", "sigma_inv")
+    __slots__ = ("_sigma", "_theta", "_sigma_inverse")
 
     def __init__(self, sigma, theta, r_seed=None):
         """
-        Default constructor of the DW object.
+        Default constructor of the OU object.
 
         :param sigma: noise diffusion coefficient.
 
@@ -22,8 +22,9 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
         :param r_seed: random seed.
         """
+
         # Call the constructor of the parent class.
-        super().__init__(r_seed, n_dim=1)
+        super().__init__(r_seed)
 
         # Display class info.
         print(" Creating Ornstein-Uhlenbeck process.")
@@ -33,7 +34,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
             # Store the diffusion noise.
             if sigma > 0.0:
-                self.sigma_ = sigma
+                self._sigma = sigma
             else:
                 raise ValueError(f" {self.__class__.__name__}:"
                                  f" The diffusion noise value: {sigma},"
@@ -50,7 +51,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
             # Store the drift parameter.
             if theta > 0.0:
-                self.theta_ = theta
+                self._theta = theta
             else:
                 raise ValueError(f" {self.__class__.__name__}:"
                                  f" The drift parameter: {theta},"
@@ -62,8 +63,8 @@ class OrnsteinUhlenbeck(StochasticProcess):
                             f" should be floating point number.")
         # _end_if_
 
-        # Inverse of sigma noise.
-        self.sigma_inv = 1.0 / sigma
+        # Inverse of sigma noise coefficient.
+        self._sigma_inverse = 1.0 / sigma
     # _end_def_
 
     @property
@@ -73,7 +74,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
         :return: the drift parameter.
         """
-        return self.theta_
+        return self._theta
     # _end_def_
 
     @theta.setter
@@ -92,7 +93,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         if new_value > 0.0:
 
             # Make the change.
-            self.theta_ = new_value
+            self._theta = new_value
         else:
             # Raise an error with a message.
             raise ValueError(f" {self.__class__.__name__}: The drift value"
@@ -108,7 +109,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
         :return: the diffusion noise parameter.
         """
-        return self.sigma_
+        return self._sigma
     # _end_def_
 
     @sigma.setter
@@ -116,7 +117,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         """
         Accessor method.
 
-        :param new_value: for the sigma diffusion.
+        :param new_value: for the noise coefficient.
 
         :return: None.
         """
@@ -127,10 +128,10 @@ class OrnsteinUhlenbeck(StochasticProcess):
         if new_value > 0.0:
 
             # Make the change.
-            self.sigma_ = new_value
+            self._sigma = new_value
 
             # Update the inverse value.
-            self.sigma_inv = 1.0 / self.sigma_
+            self._sigma_inverse = 1.0 / self._sigma
         else:
             # Raise an error with a message.
             raise ValueError(f" {self.__class__.__name__}: The sigma value"
@@ -146,13 +147,13 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
         :return: the inverse of diffusion noise parameter.
         """
-        return self.sigma_inv
+        return self._sigma_inverse
     # _end_def_
 
     def make_trajectory(self, t0, tf, dt=0.01, mu=0.0):
         """
-        Generates a realizations of the Ornstein - Uhlenbeck
-        (OU) dynamical system, within a specified time-window.
+        Generates a realizations of the Ornstein-Uhlenbeck (OU)
+        dynamical system within a specified time-window [t0-tf].
 
         :param t0: initial time point.
 
@@ -166,7 +167,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         """
 
         # Create a time-window.
-        tk = np.arange(t0, tf + dt, dt)
+        tk = np.arange(t0, tf+dt, dt, dtype=float)
 
         # Number of actual trajectory samples.
         dim_t = tk.size
@@ -178,11 +179,11 @@ class OrnsteinUhlenbeck(StochasticProcess):
         x[0] = mu
 
         # Random variables (notice the scale of noise with the 'dt').
-        ek = np.sqrt(self.sigma_ * dt) * self.rng.standard_normal(dim_t)
+        ek = np.sqrt(self.sigma * dt) * self.rng.standard_normal(dim_t)
 
         # Create the sample path.
         for t in range(1, dim_t):
-            x[t] = x[t-1] + self.theta_ * (mu - x[t-1]) * dt + ek[t]
+            x[t] = x[t-1] + self.theta * (mu - x[t-1]) * dt + ek[t]
         # _end_for_
 
         # Store the sample path (trajectory).
