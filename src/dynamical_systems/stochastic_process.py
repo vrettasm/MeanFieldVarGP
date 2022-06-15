@@ -140,14 +140,15 @@ class StochasticProcess(object):
         :return: observation times / sample values.
         """
 
-        # Sanity check (1): Check if the stochastic process has been created.
+        # Sanity check (1): Check if the stochastic
+        # process has been created.
         if (self.tk is None) or (self.xt is None):
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Sample path (or time window) have not been created.")
         # _end_def_
 
-        # Sanity check (2): Check if the sample-path and
-        # the time-window have equal lengths.
+        # Sanity check (2): Check if the sample-path
+        # and the time-window have equal lengths.
         if len(self.tk) != len(self.xt):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Sample path and time window do not have the same length.")
@@ -183,8 +184,7 @@ class StochasticProcess(object):
 
         elif isinstance(n_obs, list):
 
-            # Make sure the entries as sorted
-            # and unique.
+            # Make sure the entries are sorted and unique.
             obs_t = sorted(np.unique(n_obs))
 
             # Check the length of the lists.
@@ -198,7 +198,8 @@ class StochasticProcess(object):
 
         # _end_if_
 
-        # Extract the complete observations (d = D) at times obs_t.
+        # Extract the complete observations (d = D)
+        # at times obs_t.
         obs_y = np.take(self.xt, obs_t, axis=0)
 
         # Check if a mask has been given.
