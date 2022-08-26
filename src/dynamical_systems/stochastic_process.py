@@ -1,32 +1,31 @@
 import numpy as np
-from numpy.random import (default_rng,
-                          SeedSequence)
+from numpy.random import default_rng
 
 
 class StochasticProcess(object):
     """
     This is a base (parent) class for all the stochastic process models.
     It holds basic information, such as:
+
         1) the discrete sample path (xt)
         2) the discrete time window (tk)
-        3) random number generator,
-        4) etc.
+        3) random number generator (rng)
     """
 
-    __slots__ = ("xt", "tk", "sp_rng")
+    __slots__ = ("xt", "tk", "_rng")
 
-    def __init__(self, r_seed=None):
+    def __init__(self, r_seed: int = None):
         """
-        Default constructor of the SP object.
+        Default constructor of the StochasticProcess object.
 
-        :param r_seed: random seed.
+        :param r_seed: random seed (integer).
         """
 
         # Create a random number generator.
         if r_seed is None:
-            self.sp_rng = default_rng()
+            self._rng = default_rng()
         else:
-            self.sp_rng = default_rng(SeedSequence(r_seed))
+            self._rng = default_rng(seed=r_seed)
         # _end_if_
 
         # Sample-path.
@@ -111,7 +110,7 @@ class StochasticProcess(object):
         # _end_def_
 
         # Return the 'dt'.
-        return np.abs(self.tk[1] - self.tk[0])
+        return np.abs(np.diff(self.tk)[0])
     # _end_def_
 
     @property
@@ -121,7 +120,7 @@ class StochasticProcess(object):
 
         :return: the random number generator.
         """
-        return self.sp_rng
+        return self._rng
     # _end_def_
 
     def collect_obs(self, n_obs, h_mask=None):
@@ -133,11 +132,12 @@ class StochasticProcess(object):
         we will return the samples at the exact locations.
 
         :param n_obs: Observations density (i.e. the number of obs
-        per time unit), or list with the indexes that we want to sample.
+        per time unit), or list with the indexes that we want to
+        sample.
 
         :param h_mask: boolean that masks only the observed values.
 
-        :return: observation times / sample values.
+        :return: observation times / observation values (noise free).
         """
 
         # Sanity check (1): Check if the stochastic
@@ -161,7 +161,7 @@ class StochasticProcess(object):
         if isinstance(n_obs, int):
 
             # Get the discrete time step.
-            dt = np.diff(self.tk)[0]
+            dt = np.abs(np.diff(self.tk)[0])
 
             # Check if the required number of observations, per
             # time unit, exceeds the available capacity of samples.
@@ -198,8 +198,7 @@ class StochasticProcess(object):
 
         # _end_if_
 
-        # Extract the complete observations (d = D)
-        # at times obs_t.
+        # Extract the full observations (d = D) at times 'obs_t'.
         obs_y = np.take(self.xt, obs_t, axis=0)
 
         # Check if a mask has been given.
