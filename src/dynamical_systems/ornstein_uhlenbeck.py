@@ -12,19 +12,19 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
     __slots__ = ("_sigma", "_theta", "_sigma_inverse")
 
-    def __init__(self, sigma, theta, r_seed=None):
+    def __init__(self, sigma: float, theta: float, r_seed: int = None):
         """
-        Default constructor of the OU object.
+        Default constructor of the Ornstein-Uhlenbeck (OU) object.
 
-        :param sigma: noise diffusion coefficient.
+        :param sigma: (float) noise diffusion coefficient.
 
-        :param theta: drift model parameter.
+        :param theta: (float) drift model parameter.
 
-        :param r_seed: random seed.
+        :param r_seed: (int) random seed.
         """
 
         # Call the constructor of the parent class.
-        super().__init__(r_seed)
+        super().__init__(r_seed=r_seed)
 
         # Display class info.
         print(" Creating Ornstein-Uhlenbeck process.")
@@ -46,6 +46,9 @@ class OrnsteinUhlenbeck(StochasticProcess):
                             f" should be floating point number.")
         # _end_if_
 
+        # Inverse of sigma noise coefficient.
+        self._sigma_inverse = 1.0 / sigma
+
         # Check for the correct type.
         if isinstance(theta, float):
 
@@ -63,14 +66,12 @@ class OrnsteinUhlenbeck(StochasticProcess):
                             f" should be floating point number.")
         # _end_if_
 
-        # Inverse of sigma noise coefficient.
-        self._sigma_inverse = 1.0 / sigma
     # _end_def_
 
     @property
     def theta(self):
         """
-        Accessor method.
+        Accessor method (getter).
 
         :return: the drift parameter.
         """
@@ -78,9 +79,9 @@ class OrnsteinUhlenbeck(StochasticProcess):
     # _end_def_
 
     @theta.setter
-    def theta(self, new_value):
+    def theta(self, new_value: float):
         """
-        Accessor method.
+        Accessor method (setter).
 
         :param new_value: for the drift parameter.
 
@@ -105,7 +106,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
     @property
     def sigma(self):
         """
-        Accessor method.
+        Accessor method (getter).
 
         :return: the diffusion noise parameter.
         """
@@ -113,14 +114,15 @@ class OrnsteinUhlenbeck(StochasticProcess):
     # _end_def_
 
     @sigma.setter
-    def sigma(self, new_value):
+    def sigma(self, new_value: float):
         """
-        Accessor method.
+        Accessor method (setter).
 
         :param new_value: for the noise coefficient.
 
         :return: None.
         """
+
         # Make sure input is float.
         new_value = float(new_value)
 
@@ -143,30 +145,30 @@ class OrnsteinUhlenbeck(StochasticProcess):
     @property
     def inverse_sigma(self):
         """
-        Accessor method.
+        Accessor method (getter).
 
         :return: the inverse of diffusion noise parameter.
         """
         return self._sigma_inverse
     # _end_def_
 
-    def make_trajectory(self, t0, tf, dt=0.01, mu=0.0):
+    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01, mu: float = 0.0):
         """
         Generates a realizations of the Ornstein-Uhlenbeck (OU)
         dynamical system within a specified time-window [t0-tf].
 
-        :param t0: initial time point.
+        :param t0: (float) initial time point.
 
-        :param tf: final time point.
+        :param tf: (float) final time point.
 
-        :param dt: discrete time-step.
+        :param dt: (float) discrete time-step.
 
-        :param mu: default mean value is zero.
+        :param mu: (float) default mean value is zero.
 
         :return: None.
         """
 
-        # Create a time-window.
+        # Create a time-window with 'dt' time step.
         tk = np.arange(t0, tf+dt, dt, dtype=float)
 
         # Number of actual trajectory samples.
@@ -175,10 +177,10 @@ class OrnsteinUhlenbeck(StochasticProcess):
         # Preallocate array.
         x = np.zeros(dim_t)
 
-        # The first value X(t=0) = 0 or X(t=0) ~ N(mu,K)
+        # The first value X(t=0) = mu.
         x[0] = mu
 
-        # Random variables (notice the scale of noise with the 'dt').
+        # Random variables (notice how the noise scales with the 'dt').
         ek = np.sqrt(self.sigma * dt) * self.rng.standard_normal(dim_t)
 
         # Create the sample path.
