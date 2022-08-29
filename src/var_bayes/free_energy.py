@@ -7,6 +7,7 @@ class FreeEnergy(object):
 
     def __init__(self, drift_fun: callable, mu0: array_t, tau0: array_t, sde_theta: array_t, sde_sigma: array_t,
                  tx: array_t, obs_values: array_t, obs_noise: array_t, h_operator: array_t = None):
+
         # SDE drift function.
         self.drift_fun = drift_fun
 
@@ -20,9 +21,6 @@ class FreeEnergy(object):
         # are entered correctly as numpy arrays.
         self.theta = np.asarray(sde_theta, dtype=float)
         self.sigma = np.asarray(sde_sigma, dtype=float)
-
-        # Compute the inverse of the sigma.
-        self.sigma_inverse, _ = cholesky_inv(self.sigma)
 
         # Observation times.
         self.tx = np.asarray(tx, dtype=float)
@@ -41,7 +39,7 @@ class FreeEnergy(object):
 
             # Here we copy the input array.
             self.h_operator = np.asarray(h_operator, dtype=float)
-        # _end_if
+        # _end_if_
 
         # Infer the system dimensions from the
         # diffusion noise covariance array.
@@ -173,9 +171,6 @@ class FreeEnergy(object):
         :return: None.
         """
         self.sigma = np.asarray(new_value, dtype=float)
-
-        # Update the inverse of the coefficient.
-        self.sigma_inverse, _ = cholesky_inv(self.sigma)
     # _end_def_
 
     def E_kl0(self, m0: array_t, s0: array_t):
@@ -198,13 +193,16 @@ class FreeEnergy(object):
 
     # _end_def_
 
-    def E_sde(self, mean_pts, var_pts):
+    def E_sde(self, mean_pts, vars_pts):
 
         # Number of discrete intervals (between observations).
         L = self.tx.size - 1
 
-        # Preallocate for efficiency.
-        w = np.zeros(L)
+        # Get the diagonal elements of the Sigma.
+        diagonal_sigma = self.sigma.diagonal()
+
+        # Initialize energy from the SDE.
+        Esde = 0.0
 
         # Calculate energy from all 'L' time intervals.
         for n in range(L):
@@ -213,58 +211,60 @@ class FreeEnergy(object):
             ti, tj = self.tx[n], self.tx[n+1]
 
             # Distance between the two limits.
+            # NOTE: This should not change for equally spaced observations.
             delta_t = np.abs(tj-ti)
 
             # Mid-point intervals (for the evaluation of the Esde function).
+            # NOTE: These should not change for equally spaced observations.
             h = float(delta_t/3.0)
             c = float(delta_t/2.0)
 
             # Separate variables for efficiency.
-            vMn = mean_pts[:, ((n*3)-2):((n*3)+1)]
-            vSn = var_pts[:, ((n*2)-1):((n*2)+1)]
+            nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
+            nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
 
-            # Precompute for efficiency.
-            energy_n = self.drift_fun(h, c, vMn, vSn, self.theta, self.sigma)
+            # Get the n-th interval energy value.
+            energy_n = self.drift_fun(self.theta, self.sigma, h, c,
+                                      nth_mean_points, nth_vars_points)
 
             # Scale with the inverse system noise.
-            w[n] = energy_n.dot(self.sigma_inverse)
+            Esde += energy_n/diagonal_sigma[n]
         # _end_for_
 
-        # Return the total energy (from all intervals).
-        return 0.5*np.sum(w)
+        # Return the total energy (including the correct scaling).
+        return 0.5 * Esde
     # _end_def_
 
     def E_obs(self, mean_pts, var_pts):
 
         Tkm, Tks = [], []
 
-        # Logarithm of 2*pi.
-        log2pi = 1.8378770664093453
-
         # Inverted Ri and Cholesky factor Qi.
         Ri, Qi = cholesky_inv(self.noise)
 
-        # Keep the diagonal elements of Covariance.
-        diagonal_Ri = Ri.diagonal()
+        # Auxiliary quantity no.1.
+        Z = Qi.dot(self.obs - self.h_operator.dot(mean_pts[:, Tkm]))
 
-        # Auxiliary quantity.
-        Z = Qi.dot(self.obs - self.h_operator.dot(mean_pts[Tkm]))
+        # Auxiliary quantity no.2.
+        W = Ri.diagonal().T.dot(self.h_operator.dot(var_pts[:, Tks]))
 
         # Initial observations' energy.
-        Eobs = 0
+        Eobs = 0.0
 
         # Calculate from all 'M' observations.
         for n in range(self.num_m):
-            # Take the index of the observation.
-            tk = Tks[n]
 
             # Get the auxiliary value at this point.
             Zn = Z[n]
 
-            # Compute the energy of the tk-th observation.
-            Eobs += Zn.T.dot(Zn) + diagonal_Ri.T.dot(self.h_operator.dot(var_pts[tk]))
+            # Compute the energy of the n-th observation.
+            Eobs += Zn.T.dot(Zn) + W[n]
         # _end_for_
 
+        # Logarithm of 2*pi.
+        log2pi = 1.8378770664093453
+
+        # Compute (and return) the total energy including the constants.
         return 0.5*(Eobs + self.num_m*(self.dim_d*log2pi + log_det(self.noise)))
     # _end_def_
 
@@ -272,17 +272,20 @@ class FreeEnergy(object):
 
         # Separate the mean from the variance points.
         mean_points = np.reshape(x[0:self.num_mp],
-                                 self.dim_D, (3*self.num_m + 4))
+                                 (self.dim_D, (3*self.num_m + 4)))
 
-        # The variance points are in log-space to ensure positivity.
-        var_points = np.reshape(np.exp(x[self.num_mp + 1:]),
-                                self.dim_D, (2*self.num_m + 3))
+        # The variance points are in log-space to ensure positivity,
+        # so we pass them through the exponential function first.
+        vars_points = np.reshape(np.exp(x[self.num_mp:]),
+                                 (self.dim_D, (2*self.num_m + 3)))
 
         # Return the total (free) energy as the sum of the individual
-        # components.
-        return self.E_kl0(mean_points[0], var_points[0]) +\
-               self.E_sde(mean_points, var_points) +\
-               self.E_obs(mean_points, var_points)
+        # components. NOTE: If we want to optimize the hyperparameter
+        # we should add another term, e.g. E_param, and include it in
+        # the total sum of energy values.
+        return self.E_kl0(mean_points[:, 0], vars_points[:, 0]) +\
+               self.E_sde(mean_points, vars_points) +\
+               self.E_obs(mean_points, vars_points)
     # _end_def_
 
     def __call__(self, *args, **kwargs):
