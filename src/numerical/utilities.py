@@ -1,9 +1,10 @@
 import numpy as np
 from numba import njit
+from numpy import array as array_t
 from numpy.linalg import solve, cholesky, LinAlgError
 
 
-def finite_diff(fun, x, *args):
+def finite_diff(fun, x: array_t, *args):
     """
     Calculates the approximate derivative of function "fun"
     on a parameter vector "x". A central difference formula
@@ -56,7 +57,7 @@ def finite_diff(fun, x, *args):
     return grad_n[0] if dim_x == 1 else grad_n
 # _end_def_
 
-def log_det(x):
+def log_det(x: array_t):
     """
     Returns the log(det(x)), but more stable and accurate.
 
@@ -96,7 +97,7 @@ def log_det(x):
 # _end_def_
 
 @njit(fastmath=True)
-def safe_log(x):
+def safe_log(x: array_t):
     """
     This function prevents the computation of very small,
     or very large values of logarithms that would lead to
@@ -132,7 +133,7 @@ def safe_log(x):
     return np.log(x)
 # _end_def_
 
-def my_trapezoid(fx, dx=1.0, obs_t=None):
+def my_trapezoid(fx: array_t, dx=1.0, obs_t=None):
     """
     This method computes the numerical integral
     of the discrete function values 'fx', with
@@ -195,7 +196,7 @@ def my_trapezoid(fx, dx=1.0, obs_t=None):
 # _end_def_
 
 @njit
-def cholesky_inv_fast(x):
+def cholesky_inv_fast(x: array_t):
     """
     Helper function implemented with numba.
 
@@ -211,7 +212,7 @@ def cholesky_inv_fast(x):
     return x_inv, c_inv
 # _end_def_
 
-def cholesky_inv(x):
+def cholesky_inv(x: array_t):
     """
     Inverts an input array (matrix) using Cholesky
     decomposition.
@@ -228,6 +229,14 @@ def cholesky_inv(x):
     if x.ndim == 0:
         return 1.0 / x, 1.0 / np.sqrt(x)
     else:
+
+        # Check if the input is vector.
+        if x.ndim == 1:
+
+            # Convert it to diagonal matrix.
+            x = np.diag(x)
+        # _end_if_
+
         return cholesky_inv_fast(x)
     # _end_if_
 
