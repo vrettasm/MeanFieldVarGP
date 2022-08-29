@@ -132,7 +132,7 @@ def safe_log(x):
     return np.log(x)
 # _end_def_
 
-def my_trapz(fx, dx=1.0, obs_t=None):
+def my_trapezoid(fx, dx=1.0, obs_t=None):
     """
     This method computes the numerical integral
     of the discrete function values 'fx', with
@@ -195,7 +195,7 @@ def my_trapz(fx, dx=1.0, obs_t=None):
 # _end_def_
 
 @njit
-def chol_inv_fast(x):
+def cholesky_inv_fast(x):
     """
     Helper function implemented with numba.
 
@@ -211,7 +211,7 @@ def chol_inv_fast(x):
     return x_inv, c_inv
 # _end_def_
 
-def chol_inv(x):
+def cholesky_inv(x):
     """
     Inverts an input array (matrix) using Cholesky
     decomposition.
@@ -228,10 +228,12 @@ def chol_inv(x):
     if x.ndim == 0:
         return 1.0 / x, 1.0 / np.sqrt(x)
     else:
-        return chol_inv_fast(x)
+        return cholesky_inv_fast(x)
+    # _end_if_
+
 # _end_def_
 
-def ut_approx(fun, x_bar, x_cov, *args):
+def unscented_approximation(fun, x_bar, x_cov, *args):
     """
     This method computes the approximate values for the mean and
     the covariance of a multivariate random variable. To achieve
