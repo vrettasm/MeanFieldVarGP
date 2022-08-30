@@ -115,7 +115,7 @@ class FreeEnergy(object):
         vars_points = (2 * self.num_M + 3)
 
         # Number of variance points (scaled with the dimensions).
-        self.total_num_sp = self.dim_D * vars_points
+        # self.total_num_sp = self.dim_D * vars_points
 
         # Indexes of the observations at the mean/var points.
         self.Tkm = np.arange(3, mean_points - 1, step=3)
@@ -294,10 +294,10 @@ class FreeEnergy(object):
         Ri, Qi = cholesky_inv(self.obs_noise)
 
         # Auxiliary quantity no.1.
-        Z = Qi.dot(self.obs_values - self.h_operator.dot(mean_pts[:, self.Tkm]))
+        Z = Qi.dot(self.obs_values - self.h_operator.dot(mean_pts))
 
         # Auxiliary quantity no.2.
-        W = Ri.diagonal().T.dot(self.h_operator.dot(var_pts[:, self.Tks]))
+        W = Ri.diagonal().T.dot(self.h_operator.dot(var_pts))
 
         # Initialize observations' energy.
         Eobs = 0.0
@@ -340,7 +340,7 @@ class FreeEnergy(object):
         # the total sum of energy values.
         return self.E_kl0(mean_points[:, 0], vars_points[:, 0]) +\
                self.E_sde(mean_points, vars_points) +\
-               self.E_obs(mean_points, vars_points)
+               self.E_obs(mean_points[:, self.Tkm], vars_points[:, self.Tks])
     # _end_def_
 
 # _end_class_
