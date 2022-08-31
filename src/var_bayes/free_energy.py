@@ -42,10 +42,10 @@ class FreeEnergy(object):
         self.drift_fun = drift_func
 
         # Gradients of the SDE with respect to the mean points.
-        self.grad_mp = grad_mean
+        self.grad_fun_mp = grad_mean
 
         # Gradients of the SDE with respect to the variance points.
-        self.grad_sp = grad_vars
+        self.grad_fun_vp = grad_vars
 
         # Prior mean (t=0).
         self._mu0 = np.asarray(mu0, dtype=float)
@@ -319,12 +319,12 @@ class FreeEnergy(object):
                                    nth_mean_points, nth_vars_points)
 
             # Compute the partial gradients of the mean points.
-            dEsde_dm[n] = 0.5*self.grad_mp(self.theta, self.sigma, h, c,
-                                           nth_mean_points, nth_vars_points)
+            dEsde_dm[n] = 0.5*self.grad_fun_mp(self.theta, self.sigma, h, c,
+                                               nth_mean_points, nth_vars_points)
 
             # Compute the partial gradients of the variance points.
-            dEsde_ds[n] = 0.5*self.grad_sp(self.theta, self.sigma, h, c,
-                                           nth_mean_points, nth_vars_points)
+            dEsde_ds[n] = 0.5*self.grad_fun_vp(self.theta, self.sigma, h, c,
+                                               nth_mean_points, nth_vars_points)
         # _end_for_
 
         # Sanity check.
@@ -372,8 +372,8 @@ class FreeEnergy(object):
         Eobs = 0.0
 
         # Initialize gradients arrays.
-        dEobs_dm = np.zeros(self.num_M, self.dim_d)
-        dEobs_ds = np.zeros(self.num_M, self.dim_d)
+        dEobs_dm = np.zeros(self.num_M, self.dim_D)
+        dEobs_ds = np.zeros(self.num_M, self.dim_D)
 
         # Calculate partial energies from all 'M' observations.
         # NOTE: The gradients are given by:
