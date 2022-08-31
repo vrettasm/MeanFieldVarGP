@@ -246,8 +246,14 @@ class FreeEnergy(object):
         # Energy of the initial moment.
         # NOTE: This formula works only because the matrices 'tau0'
         # and 's0' are diagonal, and we work only with vectors.
-        E0 = 0.5 * (np.log(np.prod(self._tau0 / s0)) +
+        E0 = 0.5 * (np.sum(np.log(self._tau0 / s0)) +
                     np.sum((z0**2 + s0 - self._tau0) / self._tau0))
+
+        # Sanity check.
+        if not np.isfinite(E0):
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" KL0 is not finite number: {E0}")
+        # _end_if_
 
         # Auxiliary variable.
         one_ = np.ones(1)
@@ -321,6 +327,12 @@ class FreeEnergy(object):
                                            nth_mean_points, nth_vars_points)
         # _end_for_
 
+        # Sanity check.
+        if not np.isfinite(Esde):
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Esde is not finite number: {Esde}")
+        # _end_if_
+
         # Return the total energy (including the correct scaling).
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
@@ -388,11 +400,17 @@ class FreeEnergy(object):
         # Final energy value (including the constants).
         Eobs += self.num_M * (self.dim_d * log2pi + log_det(self.obs_noise))
 
+        # Sanity check.
+        if not np.isfinite(Eobs):
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Eobs is not finite number: {Eobs}")
+        # _end_if_
+
         # Return the total observation energy and its gradients.
         return 0.5 * Eobs, dEobs_dm, dEobs_ds
     # _end_def_
 
-    def E_total(self, x):
+    def E_cost(self, x):
         """
         TBD
 
@@ -403,12 +421,14 @@ class FreeEnergy(object):
 
         # Separate the mean from the variance points.
         mean_points = np.reshape(x[0:self.num_mp],
-                                 (self.dim_D, (3*self.num_M + 4)))
+                                 (self.dim_D, (3*self.num_M + 4)),
+                                 order='C')
 
         # The variance points are in log-space to ensure positivity,
         # so we pass them through the exponential function first.
         vars_points = np.reshape(np.exp(x[self.num_mp:]),
-                                 (self.dim_D, (2*self.num_M + 3)))
+                                 (self.dim_D, (2*self.num_M + 3)),
+                                 order='C')
 
         # Energy (and gradients) from the initial moment (t=0).
         E0, dE0_dm0, dE0_ds0 = self.E_kl0(mean_points[:, 0],
@@ -423,14 +443,32 @@ class FreeEnergy(object):
                                               vars_points[:, self.iks])
 
         # Put all the energy values together.
-        E_tot = E0 + Esde + Eobs
+        Ecost = E0 + Esde + Eobs
+
+        # Put the gradients together.
+        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4))
+        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3))
+
+        # Add the initial contribution from KL0.
+        dEsde_dm[0, :, 0] += dE0_dm0
+        dEsde_ds[0, :, 0] += dE0_ds0
+
+        # Add the gradients (at observation times).
+        for n, grad_dm, grad_ds in enumerate(zip(dEsde_dm, dEsde_ds)):
+            grad_dm += dEobs_dm[n]
+            grad_ds += dEobs_ds[n]
+        # _end_for_
+
+        # Rescale the variance gradients to account for the log-transformation.
+        # NOTE: this is element-wise multiplication.
+        Ecost_ds = Ecost_ds*vars_points
 
         # Return the total (free) energy as the sum of the individual
         # components. NOTE: If we want to optimize the hyperparameter
         # we should add another term, e.g. E_param, and include it in
         # the total sum of energy values.
-        return E_tot, grad_tot
-
+        return Ecost, np.concatenate((Ecost_dm.flatten(order='C'),
+                                      Ecost_ds.flatten(order='C')), axis=0)
     # _end_def_
 
 # _end_class_
