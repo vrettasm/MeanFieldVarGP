@@ -39,7 +39,7 @@ class FreeEnergy(object):
         """
 
         # SDE drift function.
-        self.drift_fun = drift_func
+        self.drift_fun_sde = drift_func
 
         # Gradients of the SDE with respect to the mean points.
         self.grad_fun_mp = grad_mean
@@ -315,16 +315,16 @@ class FreeEnergy(object):
             nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
 
             # Get the SDE (partial) energy for the n-th interval.
-            Esde += self.drift_fun(self.theta, self.sigma, h, c,
-                                   nth_mean_points, nth_vars_points)
+            Esde += self.drift_fun_sde(self.theta, self.sigma, h, c,
+                                       nth_mean_points, nth_vars_points)
 
             # Compute the partial gradients of the mean points.
-            dEsde_dm[n] = 0.5*self.grad_fun_mp(self.theta, self.sigma, h, c,
-                                               nth_mean_points, nth_vars_points)
+            dEsde_dm[n] = 0.5 * self.grad_fun_mp(self.theta, self.sigma, h, c,
+                                                 nth_mean_points, nth_vars_points)
 
             # Compute the partial gradients of the variance points.
-            dEsde_ds[n] = 0.5*self.grad_fun_vp(self.theta, self.sigma, h, c,
-                                               nth_mean_points, nth_vars_points)
+            dEsde_ds[n] = 0.5 * self.grad_fun_vp(self.theta, self.sigma, h, c,
+                                                 nth_mean_points, nth_vars_points)
         # _end_for_
 
         # Sanity check.
@@ -450,18 +450,16 @@ class FreeEnergy(object):
         Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3))
 
         # Add the initial contribution from KL0.
-        dEsde_dm[0, :, 0] += dE0_dm0
-        dEsde_ds[0, :, 0] += dE0_ds0
+        Ecost_dm[:, 0] += dE0_dm0
+        Ecost_ds[:, 0] += dE0_ds0
 
         # Add the gradients (at observation times).
-        for n, grad_dm, grad_ds in enumerate(zip(dEsde_dm, dEsde_ds)):
-            grad_dm += dEobs_dm[n]
-            grad_ds += dEobs_ds[n]
-        # _end_for_
+        Ecost_dm[:, self.ikm] += dEobs_dm.T
+        Ecost_ds[:, self.iks] += dEobs_ds.T
 
         # Rescale the variance gradients to account for the log-transformation.
-        # NOTE: this is element-wise multiplication.
-        Ecost_ds = Ecost_ds*vars_points
+        # NOTE: This is element-wise multiplication.
+        Ecost_ds *= vars_points
 
         # Return the total (free) energy as the sum of the individual
         # components. NOTE: If we want to optimize the hyperparameter
