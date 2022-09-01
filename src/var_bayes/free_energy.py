@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.integrate import quad
 from numpy import array as array_t
 from src.numerical.utilities import cholesky_inv, log_det
 
@@ -245,7 +246,7 @@ class FreeEnergy(object):
 
         # Energy of the initial moment.
         # NOTE: This formula works only because the matrices 'tau0'
-        # and 's0' are diagonal, and we work only with vectors.
+        # and 's0' are diagonal, and we work with vectors.
         E0 = 0.5 * (np.sum(np.log(self._tau0 / s0)) +
                     np.sum((z0**2 + s0 - self._tau0) / self._tau0))
 
@@ -263,8 +264,8 @@ class FreeEnergy(object):
         dE0_dm0 = np.atleast_1d(z0 / self._tau0)
         dE0_ds0 = np.atleast_1d(0.5 * (one_ / self._tau0 - one_ / s0))
 
-        # Kullback-Liebler and its derivatives at time t=0,
-        # (i.e. dKL0/dm(0) and dKL0/ds(0))
+        # Kullback-Liebler and its derivatives at
+        # time t=0, (i.e. dKL0/dm(0), dKL0/ds(0))
         return E0, dE0_dm0, dE0_ds0
 
     # _end_def_
@@ -294,6 +295,9 @@ class FreeEnergy(object):
         dEsde_dm = np.zeros(L, self.dim_D, 4)
         dEsde_ds = np.zeros(L, self.dim_D, 3)
 
+        # Inverted diagonal noise vector.
+        inv_sigma = 1.0 / self.sigma
+
         # Calculate energy from all 'L' time intervals.
         for n in range(L):
 
@@ -314,9 +318,17 @@ class FreeEnergy(object):
             nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
             nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
 
-            # Get the SDE (partial) energy for the n-th interval.
-            Esde += self.drift_fun_sde(self.theta, self.sigma, h, c,
-                                       nth_mean_points, nth_vars_points)
+            # Define the function to pass to the solver. We use the lambda func
+            # here to fix all the additional input parameters, except the time
+            # variable "t".
+            func = lambda t: self.drift_fun_sde(t, ti, h, c,
+                                                self.theta, self.sigma,
+                                                nth_mean_points, nth_vars_points)
+
+            # Scale the Energy with the inverse noise.
+            # NOTE: This is an inner product operation
+            # so the final value is still a scalar.
+            Esde += quad(func, ti, tj).dot(inv_sigma)
 
             # Compute the partial gradients of the mean points.
             dEsde_dm[n] = 0.5 * self.grad_fun_mp(self.theta, self.sigma, h, c,
@@ -372,8 +384,8 @@ class FreeEnergy(object):
         Eobs = 0.0
 
         # Initialize gradients arrays.
-        dEobs_dm = np.zeros(self.num_M, self.dim_D)
-        dEobs_ds = np.zeros(self.num_M, self.dim_D)
+        dEobs_dm = np.zeros(self.dim_D, self.num_M)
+        dEobs_ds = np.zeros(self.dim_D, self.num_M)
 
         # Calculate partial energies from all 'M' observations.
         # NOTE: The gradients are given by:
@@ -388,10 +400,10 @@ class FreeEnergy(object):
             Eobs += Zk.T.dot(Zk) + W[k]
 
             # Gradient of E_{obs} w.r.t. m(tk).
-            dEobs_dm[k] = kappa_1[k]
+            dEobs_dm[:, k] = kappa_1[k]
 
             # Gradient of E_{obs} w.r.t. S(tk).
-            dEobs_ds[k] = kappa_2
+            dEobs_ds[:, k] = kappa_2
         # _end_for_
 
         # Logarithm of 2*pi.
@@ -453,9 +465,12 @@ class FreeEnergy(object):
         Ecost_dm[:, 0] += dE0_dm0
         Ecost_ds[:, 0] += dE0_ds0
 
+        # We need the gradients of Esde here ...
+        # ...
+
         # Add the gradients (at observation times).
-        Ecost_dm[:, self.ikm] += dEobs_dm.T
-        Ecost_ds[:, self.iks] += dEobs_ds.T
+        Ecost_dm[:, self.ikm] += dEobs_dm
+        Ecost_ds[:, self.iks] += dEobs_ds
 
         # Rescale the variance gradients to account for the log-transformation.
         # NOTE: This is element-wise multiplication.
