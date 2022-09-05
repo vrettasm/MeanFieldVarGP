@@ -46,7 +46,7 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     # _end_if_
 
     # Define the time variable 't' as symbol.
-    t = sym.Symbol("t", real=True, positive=True)
+    t = sym.Symbol("t", real=True, nonnegative=True)
 
     # Define the fixed time points 'tk' as symbols.
     ti = sym.symbols(f"t:{order + 1}", real=True, positive=True)
