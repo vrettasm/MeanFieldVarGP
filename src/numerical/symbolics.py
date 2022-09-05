@@ -20,22 +20,20 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     (order=2) for the variance functions 'st'.
 
     EXAMPLE(s):
-        # Here we define the functions.
-        mt = LagrangePolynomial(letter="m", order=3)
-        st = LagrangePolynomial(letter="s", order=2)
+        # Here we define the function m(t).
+        mt, t, mk, _ = LagrangePolynomial(letter="m", order=3)
 
         # Here we take the derivatives w.r.t. time 't'.
-        dm_dt = mt.diff(t)
-        ds_dt = st.diff(t)
+        dmt_dt = mt.diff(t)
 
-        # Here we take the derivatives w.r.t. the first
-        # points m0, s0.
-        dm_dm0 = mt.diff(xi[0])
-        ds_ds0 = st.diff(xi[0])
+        # Here we take the derivatives w.r.t. the first points mk0.
+        dmt_dm0 = mt.diff(mk[0])
 
         etc.
 
-    :return: the Lagrange polynomial in symbolic notation.
+    :return: the Lagrange polynomial in symbolic notation. In addition,
+    it also returns all the symbolic variables to allow for the gradient
+    calculations.
     """
 
     # Define the time variable 't' as symbol.
@@ -47,8 +45,8 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     # Define the fixed function points 'xk' as symbols.
     xi = sym.symbols(f"{letter}:{order + 1}")
 
-    # Initialize the return polynomial.
-    poly_func = sym.Symbol('')
+    # Declare the return polynomial.
+    poly_func = None
 
     # Construct the Lagrange polynomial iteratively.
     for k in range(0, order + 1):
@@ -71,9 +69,20 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
 
         # Add the partial sum scaled with the function
         # value 'xk'.
-        poly_func += (xi[k] * sym.prod(partial_k))
+        if k == 0:
+            poly_func = xi[k] * sym.prod(partial_k)
+        else:
+            poly_func += xi[k] * sym.prod(partial_k)
+        # _end_if_
 
     # _end_for_
 
-    return poly_func
+    #  Sanity check.
+    if poly_func is None:
+        raise RuntimeError(" LagrangePolynomial:"
+                           " Error in computing the polynomial.")
+    # _end_if_
+
+    # Return all the symbolic variables.
+    return poly_func, t, xi, ti
 # _end_def_
