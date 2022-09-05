@@ -37,13 +37,13 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     """
 
     # Define the time variable 't' as symbol.
-    t = sym.Symbol("t")
+    t = sym.Symbol("t", real=True, positive=True)
 
     # Define the fixed time points 'tk' as symbols.
-    ti = sym.symbols(f"t:{order + 1}")
+    ti = sym.symbols(f"t:{order + 1}", real=True, positive=True)
 
     # Define the fixed function points 'xk' as symbols.
-    xi = sym.symbols(f"{letter}:{order + 1}")
+    xi = sym.symbols(f"{letter}:{order + 1}", real=True)
 
     # Declare the return polynomial.
     poly_func = None
@@ -79,8 +79,8 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
 
     #  Sanity check.
     if poly_func is None:
-        raise RuntimeError(" LagrangePolynomial:"
-                           " Error in computing the polynomial.")
+        raise RuntimeError(f" LagrangePolynomial({letter}, {order}):"
+                           " Error while computing the polynomial.")
     # _end_if_
 
     # Return all the symbolic variables.
