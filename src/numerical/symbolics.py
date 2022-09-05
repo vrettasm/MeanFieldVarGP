@@ -36,6 +36,15 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     calculations.
     """
 
+    # Make sure order is integer.
+    order = int(order)
+
+    # Sanity check.
+    if order < 0:
+        raise ValueError(f" LagrangePolynomial({letter}, {order}):"
+                         " Order value can't be negative.")
+    # _end_if_
+
     # Define the time variable 't' as symbol.
     t = sym.Symbol("t", real=True, positive=True)
 
