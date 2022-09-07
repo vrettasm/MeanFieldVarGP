@@ -1,7 +1,7 @@
 import sympy as sym
 
 
-def LagrangePolynomial(letter: str = "m", order: int = 3):
+def LagrangePolynomial(letter: str = "m", order: int = 3, fp: str = "t"):
     """
     Returns a Lagrange polynomial in symbolic representation.
 
@@ -18,6 +18,8 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     :param order: this is the order of the polynomials. Typically, we will
     use 3rd order (order=3) for the mean functions 'mt', and 2nd order
     (order=2) for the variance functions 'st'.
+
+    :param fp: this is the letter to identify the fixed mid-points.
 
     EXAMPLE(s):
         # Here we define the function m(t).
@@ -49,7 +51,7 @@ def LagrangePolynomial(letter: str = "m", order: int = 3):
     t = sym.Symbol("t", real=True, nonnegative=True)
 
     # Define the fixed time points 'tk' as symbols.
-    ti = sym.symbols(f"t:{order + 1}", real=True, positive=True)
+    ti = sym.symbols(f"{fp}:{order + 1}", real=True, positive=True)
 
     # Define the fixed function points 'xk' as symbols.
     xi = sym.symbols(f"{letter}:{order + 1}", real=True)
