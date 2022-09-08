@@ -39,13 +39,15 @@ class FreeEnergy(object):
         :param h_operator: observation operator (default = None).
         """
 
-        # SDE drift function.
+        # (WRAPPER FUNCTION): SDE energy function.
         self.drift_fun_sde = drift_func
 
-        # Gradients of the SDE with respect to the mean points.
+        # (WRAPPER FUNCTION): Gradients of the
+        # SDE with respect to the mean points.
         self.grad_fun_mp = grad_mean
 
-        # Gradients of the SDE with respect to the variance points.
+        # (WRAPPER FUNCTION): Gradients of the
+        # SDE with respect to the variance points.
         self.grad_fun_vp = grad_vars
 
         # Prior mean (t=0).
@@ -292,8 +294,8 @@ class FreeEnergy(object):
         # Initialize gradients arrays.
         # > dEsde_dm := dEsde(tk)/dm(tk)
         # > dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = np.zeros(L, self.dim_D, 4)
-        dEsde_ds = np.zeros(L, self.dim_D, 3)
+        dEsde_dm = np.zeros(L, 4*self.dim_D)
+        dEsde_ds = np.zeros(L, 3*self.dim_D)
 
         # Inverted diagonal noise vector.
         inv_sigma = 1.0 / self.sigma
@@ -321,20 +323,49 @@ class FreeEnergy(object):
             # Define the function to pass to the solver. We use the lambda func
             # here to fix all the additional input parameters, except the time
             # variable "t".
-            func = lambda t: self.drift_fun_sde(t, ti, h, c,
-                                                self.theta, self.sigma,
-                                                nth_mean_points, nth_vars_points)
+            func_En = lambda t: self.drift_fun_sde(t, ti, h, c,
+                                                   self.theta, self.sigma,
+                                                   nth_mean_points, nth_vars_points)
 
             # Scale the (partial) energy with the inverse noise.
-            Esde += 0.5 * quad(func, ti, tj).dot(inv_sigma)
+            Esde += 0.5 * quad(func_En, ti, tj).dot(inv_sigma)
 
-            # Compute the partial gradients of the mean points.
-            dEsde_dm[n] = 0.5 * self.grad_fun_mp(self.theta, self.sigma, h, c,
+            # Define the dEsde(t)/dMp lambda function.
+            func_dm = lambda t: self.grad_fun_mp(t, ti, h, c,
+                                                 self.theta, self.sigma,
                                                  nth_mean_points, nth_vars_points)
 
-            # Compute the partial gradients of the variance points.
-            dEsde_ds[n] = 0.5 * self.grad_fun_vp(self.theta, self.sigma, h, c,
+            # Define the dEsde(t)/dSp lambda function.
+            func_ds = lambda t: self.grad_fun_vp(t, ti, h, c,
+                                                 self.theta, self.sigma,
                                                  nth_mean_points, nth_vars_points)
+
+            # Solve the integrals numerically.
+            ig_dEn_dm = quad(func_dm, ti, tj)
+            ig_dEn_ds = quad(func_ds, ti, tj)
+
+            # Local accumulators. These will be used to sum the
+            # gradients over all the system dimensions "dim_D".
+            dEn_dm_acc = np.zeros(4*self.dim_D, dtype=float)
+            dEn_ds_acc = np.zeros(3*self.dim_D, dtype=float)
+
+            # Add the gradients from all dimensions.
+            for i in range(self.dim_D):
+
+                # Mean-point derivatives.
+                dEn_dm_acc += ig_dEn_dm[i] * inv_sigma[i]
+
+                # Variance-point derivatives.
+                dEn_ds_acc += ig_dEn_ds[i] * inv_sigma[i]
+
+            # _end_for_
+
+            # NOTE: the correct dimensions are (D x 4).
+            dEsde_dm[n] = 0.5 * dEn_dm_acc
+
+            # NOTE: the correct dimensions are (D x 3).
+            dEsde_ds[n] = 0.5 * dEn_ds_acc
+
         # _end_for_
 
         # Sanity check.
@@ -422,11 +453,16 @@ class FreeEnergy(object):
 
     def E_cost(self, x):
         """
-        TBD
+        Total cost function value (scalar) and derivatives.
+        This is passed to the "scipy" optimization routine:
 
-        :param x: tbd...
+         --> minimize(E_cost, x0, method="BFGS", jac=True)
 
-        :return: tbd...
+        :param x: the optimization variables. Here we take
+        the mean and variance points of the Lagrange polynomials.
+
+        :return: total energy value and derivatives (w.r.t.
+        the mean and variance points).
         """
 
         # Separate the mean from the variance points.
@@ -451,26 +487,32 @@ class FreeEnergy(object):
         # Energy from the observations' likelihood (and gradients).
         Eobs, dEobs_dm, dEobs_ds = self.E_obs(mean_points[:, self.ikm],
                                               vars_points[:, self.iks])
-
         # Put all the energy values together.
         Ecost = E0 + Esde + Eobs
 
         # Put the gradients together.
-        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4))
-        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3))
+        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtyp=float)
+        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtyp=float)
+
+        # Number of discrete intervals.
+        L = self.obs_times.size - 1
+
+        # We need to reshape the gradients of Esde.
+        for n in range(L):
+            Ecost_dm[:, (3 * n): (3 * n) + 4] = np.reshape(dEsde_dm[n], (self.dim_D, 4))
+            Ecost_ds[:, (2 * n): (2 * n) + 3] = np.reshape(dEsde_ds[n], (self.dim_D, 3))
+        # _end_for_
 
         # Add the initial contribution from KL0.
         Ecost_dm[:, 0] += dE0_dm0
         Ecost_ds[:, 0] += dE0_ds0
 
-        # We need the gradients of Esde here ...
-        # ...
-
         # Add the gradients (at observation times).
         Ecost_dm[:, self.ikm] += dEobs_dm
         Ecost_ds[:, self.iks] += dEobs_ds
 
-        # Rescale the variance gradients to account for the log-transformation.
+        # Rescale the variance gradients to account for
+        # the log-transformation (to ensure positivity).
         # NOTE: This is element-wise multiplication.
         Ecost_ds *= vars_points
 
