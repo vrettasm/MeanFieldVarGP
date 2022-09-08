@@ -320,25 +320,31 @@ class FreeEnergy(object):
             nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
             nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
 
-            # Define the function to pass to the solver. We use the lambda func
-            # here to fix all the additional input parameters, except the time
-            # variable "t".
-            func_En = lambda t: self.drift_fun_sde(t, ti, h, c,
-                                                   self.theta, self.sigma,
-                                                   nth_mean_points, nth_vars_points)
+            # Total set of input parameters (pack).
+            # NOTE: if everything is done properly
+            # then the following two must be true:
+            #
+            #   a) ti + (3 * h) == tj
+            #   b) ti + (2 * c) == tj
+            #
+            params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
+                      ti, ti + c, ti + (2 * c),
+                      *nth_mean_points.flatten(),
+                      *nth_vars_points.flatten(),
+                      *self.sigma, *self.theta]
+
+            # We use the lambda functions here to fix all the
+            # additional input parameters except the time "t"
+            func_En = lambda t: self.drift_fun_sde(t, *params)
 
             # Scale the (partial) energy with the inverse noise.
             Esde += 0.5 * quad(func_En, ti, tj).dot(inv_sigma)
 
             # Define the dEsde(t)/dMp lambda function.
-            func_dm = lambda t: self.grad_fun_mp(t, ti, h, c,
-                                                 self.theta, self.sigma,
-                                                 nth_mean_points, nth_vars_points)
+            func_dm = lambda t: self.grad_fun_mp(t, *params)
 
             # Define the dEsde(t)/dSp lambda function.
-            func_ds = lambda t: self.grad_fun_vp(t, ti, h, c,
-                                                 self.theta, self.sigma,
-                                                 nth_mean_points, nth_vars_points)
+            func_ds = lambda t: self.grad_fun_vp(t, *params)
 
             # Solve the integrals numerically.
             ig_dEn_dm = quad(func_dm, ti, tj)
