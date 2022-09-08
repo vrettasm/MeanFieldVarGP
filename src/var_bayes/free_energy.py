@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.integrate import quad
 from numpy import array as array_t
+from scipy.integrate import quad_vec
 from src.numerical.utilities import cholesky_inv, log_det
 
 
@@ -334,21 +334,15 @@ class FreeEnergy(object):
                       *self.sigma, *self.theta]
 
             # We use the lambda functions here to fix all the
-            # additional input parameters except the time "t"
+            # additional input parameters except the time "t".
             func_En = lambda t: self.drift_fun_sde(t, *params)
 
             # Scale the (partial) energy with the inverse noise.
-            Esde += 0.5 * quad(func_En, ti, tj).dot(inv_sigma)
+            Esde += quad_vec(func_En, ti, tj)[0].dot(inv_sigma)
 
-            # Define the dEsde(t)/dMp lambda function.
-            func_dm = lambda t: self.grad_fun_mp(t, *params)
-
-            # Define the dEsde(t)/dSp lambda function.
-            func_ds = lambda t: self.grad_fun_vp(t, *params)
-
-            # Solve the integrals numerically.
-            ig_dEn_dm = quad(func_dm, ti, tj)
-            ig_dEn_ds = quad(func_ds, ti, tj)
+            # Solve the integrals of dEsde(t)/dMp, dEsde(t)/dSp in [ti, tj].
+            ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params), ti, tj)[0]
+            ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params), ti, tj)[0]
 
             # Local accumulators. These will be used to sum the
             # gradients over all the system dimensions "dim_D".
@@ -383,7 +377,7 @@ class FreeEnergy(object):
         # Return the total energy (including the correct scaling).
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
-        return Esde, dEsde_dm, dEsde_ds
+        return 0.5 * Esde, dEsde_dm, dEsde_ds
     # _end_def_
 
     def E_obs(self, mean_pts, vars_pts):
