@@ -335,10 +335,10 @@ class FreeEnergy(object):
 
             # We use the lambda functions here to fix all the
             # additional input parameters except the time "t".
-            func_En = lambda t: self.drift_fun_sde(t, *params)
-
+            #
             # Scale the (partial) energy with the inverse noise.
-            Esde += quad_vec(func_En, ti, tj)[0].dot(inv_sigma)
+            Esde += quad_vec(lambda t: self.drift_fun_sde(t, *params),
+                             ti, tj)[0].dot(inv_sigma)
 
             # Solve the integrals of dEsde(t)/dMp, dEsde(t)/dSp in [ti, tj].
             ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params), ti, tj)[0]
