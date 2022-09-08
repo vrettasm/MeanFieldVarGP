@@ -261,7 +261,7 @@ class StochasticProcess(object):
         total_energy_append = total_energy.append
 
         # Run through all energy function.
-        for En in self.Esde:
+        for En in self.Esde.values():
 
             # Get the output of the lambdafied func.
             total_energy_append(En(t, *args))
@@ -313,7 +313,7 @@ class StochasticProcess(object):
         total_grad_append = total_grad.append
 
         # Run through all energy function.
-        for gm_ in self.dEsde_dm:
+        for gm_ in self.dEsde_dm.values():
 
             # Get the output of the lambdafied func.
             total_grad_append(gm_(t, *args))
@@ -365,7 +365,7 @@ class StochasticProcess(object):
         total_grad_append = total_grad.append
 
         # Run through all energy function.
-        for gs_ in self.dEsde_ds:
+        for gs_ in self.dEsde_ds.values():
 
             # Get the output of the lambdafied func.
             total_grad_append(gs_(t, *args))
