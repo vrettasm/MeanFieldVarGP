@@ -12,7 +12,7 @@ class StochasticProcess(object):
         3) random number generator (rng)
     """
 
-    __slots__ = ("xt", "tk", "_rng")
+    __slots__ = ("xt", "tk", "_rng", "Esde", "dEsde_dm", "dEsde_ds")
 
     def __init__(self, r_seed: int = None):
         """
@@ -33,6 +33,12 @@ class StochasticProcess(object):
 
         # Time-window.
         self.tk = None
+
+        # Initialize the energy and gradient dictionaries. These will
+        # hold the "lambdafied" functions for each dynamical system.
+        self.Esde = {}
+        self.dEsde_dm = {}
+        self.dEsde_ds = {}
     # _end_def_
 
     @property
@@ -210,6 +216,163 @@ class StochasticProcess(object):
 
         # Observation (times / values).
         return obs_t, obs_y
+    # _end_def_
+
+    def energy(self, t, *args):
+        """
+        Wrapper method. This method wraps the "lambdafied" energy
+        function (for each specific dynamical system) and passes
+        the output in the numerical quadrature algorithm.
+
+        The first argument 't' is the one that the quadrature is
+        based on. All the other parameters are considered fixed
+        during the integration.
+
+        Below we can see the lambdafied function signature. The
+        parameters must be passed in the exact same order.
+
+        args = [ℎ0, ℎ1, ℎ2, ℎ3, 𝑐0, 𝑐1, 𝑐2,
+                𝑑0𝑚0, 𝑑0𝑚1, 𝑑0𝑚2, 𝑑0𝑚3,
+                𝑑1𝑚0, 𝑑1𝑚1, 𝑑1𝑚2, 𝑑1𝑚3,
+                𝑑2𝑚0, 𝑑2𝑚1, 𝑑2𝑚2, 𝑑2𝑚3,
+                ...
+                𝑑k𝑚0, 𝑑k𝑚1, 𝑑k𝑚2, 𝑑k𝑚3,
+                𝑑0𝑠0, 𝑑0𝑠1, 𝑑0𝑠2,
+                𝑑1𝑠0, 𝑑1𝑠1, 𝑑1𝑠2,
+                𝑑2𝑠0, 𝑑2𝑠1, 𝑑2𝑠2,
+                ...
+                𝑑k𝑠0, 𝑑k𝑠1, 𝑑k𝑠2,
+                𝑆𝑖𝑔0, 𝑆𝑖𝑔1, 𝑆𝑖𝑔2, ..., 𝑆𝑖𝑔k,
+                θ1, θ2, θ3, ..., θN]
+
+        where k = dim_D-1, and N is the number of drift parameters.
+
+        :param t: time variable.
+
+        :param args: list with the rest of the input parameters.
+
+        :return: Esde vector (dim_D,).
+        """
+
+        # List of energy values.
+        total_energy = []
+
+        # Localise append function.
+        total_energy_append = total_energy.append
+
+        # Run through all energy function.
+        for En in self.Esde:
+
+            # Get the output of the lambdafied func.
+            total_energy_append(En(t, *args))
+        # _end_for_
+
+        # Return the list as numpy array.
+        return np.array(total_energy, dtype=float)
+    # _end_def_
+
+    def grad_mean(self, t, *args):
+        """
+        Wrapper method. This method wraps the "lambdafied" gradient
+        function (for each specific dynamical system) and passes the
+        output in the numerical quadrature algorithm.
+
+        The first argument 't' is the one that the quadrature is based on.
+        All the other parameters are considered fixed during the integration.
+
+        Below we can see the lambdafied function signature. The parameters
+        must be passed in the exact same order.
+
+        args = [ℎ0, ℎ1, ℎ2, ℎ3, 𝑐0, 𝑐1, 𝑐2,
+                𝑑0𝑚0, 𝑑0𝑚1, 𝑑0𝑚2, 𝑑0𝑚3,
+                𝑑1𝑚0, 𝑑1𝑚1, 𝑑1𝑚2, 𝑑1𝑚3,
+                𝑑2𝑚0, 𝑑2𝑚1, 𝑑2𝑚2, 𝑑2𝑚3,
+                ...
+                𝑑k𝑚0, 𝑑k𝑚1, 𝑑k𝑚2, 𝑑k𝑚3,
+                𝑑0𝑠0, 𝑑0𝑠1, 𝑑0𝑠2,
+                𝑑1𝑠0, 𝑑1𝑠1, 𝑑1𝑠2,
+                𝑑2𝑠0, 𝑑2𝑠1, 𝑑2𝑠2,
+                ...
+                𝑑k𝑠0, 𝑑k𝑠1, 𝑑k𝑠2,
+                𝑆𝑖𝑔0, 𝑆𝑖𝑔1, 𝑆𝑖𝑔2, ..., 𝑆𝑖𝑔k,
+                θ1, θ2, θ3, ..., θN]
+
+        where k = D-1, and N is the number of drift parameters.
+
+        :param t: time variable.
+
+        :param args: list with the rest of the input parameters.
+
+        :return: dEsde_dm vector (4*dim_D,).
+        """
+
+        # List of energy values.
+        total_grad = []
+
+        # Localise append function.
+        total_grad_append = total_grad.append
+
+        # Run through all energy function.
+        for gm_ in self.dEsde_dm:
+
+            # Get the output of the lambdafied func.
+            total_grad_append(gm_(t, *args))
+        # _end_for_
+
+        # Return the list as numpy array.
+        return np.array(total_grad, dtype=float)
+    # _end_def_
+
+    def grad_variance(self, t, *args):
+        """
+        Wrapper method. This method wraps the "lambdafied" gradient
+        function (for each specific dynamical system) and passes the
+        output in the numerical quadrature algorithm.
+
+        The first argument 't' is the one that the quadrature is based on.
+        All the other parameters are considered fixed during the integration.
+
+        Below we can see the lambdafied function signature. The parameters
+        must be passed in the exact same order.
+
+        params = [ℎ0, ℎ1, ℎ2, ℎ3, 𝑐0, 𝑐1, 𝑐2,
+                  𝑑0𝑚0, 𝑑0𝑚1, 𝑑0𝑚2, 𝑑0𝑚3,
+                  𝑑1𝑚0, 𝑑1𝑚1, 𝑑1𝑚2, 𝑑1𝑚3,
+                  𝑑2𝑚0, 𝑑2𝑚1, 𝑑2𝑚2, 𝑑2𝑚3,
+                  ...
+                  𝑑k𝑚0, 𝑑k𝑚1, 𝑑k𝑚2, 𝑑k𝑚3,
+                  𝑑0𝑠0, 𝑑0𝑠1, 𝑑0𝑠2,
+                  𝑑1𝑠0, 𝑑1𝑠1, 𝑑1𝑠2,
+                  𝑑2𝑠0, 𝑑2𝑠1, 𝑑2𝑠2,
+                  ...
+                  𝑑k𝑠0, 𝑑k𝑠1, 𝑑k𝑠2,
+                  𝑆𝑖𝑔0, 𝑆𝑖𝑔1, 𝑆𝑖𝑔2, ..., 𝑆𝑖𝑔k,
+                  θ1, θ2, θ3, ..., θN]
+
+        where k = D-1, and N is the number of drift parameters.
+
+        :param t: time variable.
+
+        :param args: list with the rest of the input parameters.
+
+        :return: dEsde_ds vector (3*dim_D,).
+        """
+
+        # List of energy values.
+        total_grad = []
+
+        # Localise append function.
+        total_grad_append = total_grad.append
+
+        # Run through all energy function.
+        for gs_ in self.dEsde_ds:
+
+            # Get the output of the lambdafied func.
+            total_grad_append(gs_(t, *args))
+        # _end_for_
+
+        # Return the list as numpy array.
+        return np.array(total_grad, dtype=float)
     # _end_def_
 
 # _end_class_
