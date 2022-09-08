@@ -240,7 +240,7 @@ class FreeEnergy(object):
         :param s0: marginal variance at t=0, (dim_D).
 
         :return: energy of the initial state E0, (scalar)
-        and its derivatives with respect ot 'm0' and 's0'.
+        and its derivatives with respect to 'm0' and 's0'.
         """
 
         # Difference of the two "mean" vectors.
