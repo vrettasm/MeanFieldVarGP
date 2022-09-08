@@ -1,4 +1,6 @@
+import dill
 import numpy as np
+from pathlib import Path
 from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -185,6 +187,34 @@ class DoubleWell(StochasticProcess):
 
         # Store the time window (inference).
         self.time_window = tk
+    # _end_def_
+
+    def load_functions(self):
+
+        # Get the parent folder of the file.
+        parent_dir = Path(__file__).resolve().parent
+
+        # Load the energy file.
+        with open(Path(parent_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_file_1:
+
+            self.Esde[0] = dill.load(sym_file_1)
+
+        # _end_with_
+
+        # Load the mean-gradient file.
+        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dM0.sym.sym"), "rb") as sym_file_2:
+
+            self.dEsde_dm[0] = dill.load(sym_file_2)
+
+        # _end_with_
+
+        # Load the variance-gradient file.
+        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dS0.sym.sym"), "rb") as sym_file_3:
+
+            self.dEsde_ds[0] = dill.load(sym_file_3)
+
+        # _end_with_
+
     # _end_def_
 
 # _end_class_
