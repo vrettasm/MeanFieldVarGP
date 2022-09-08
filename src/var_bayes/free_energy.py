@@ -325,10 +325,8 @@ class FreeEnergy(object):
                                                 self.theta, self.sigma,
                                                 nth_mean_points, nth_vars_points)
 
-            # Scale the Energy with the inverse noise.
-            # NOTE: This is an inner product operation
-            # so the final value is still a scalar.
-            Esde += quad(func, ti, tj).dot(inv_sigma)
+            # Scale the (partial) energy with the inverse noise.
+            Esde += 0.5 * quad(func, ti, tj).dot(inv_sigma)
 
             # Compute the partial gradients of the mean points.
             dEsde_dm[n] = 0.5 * self.grad_fun_mp(self.theta, self.sigma, h, c,
@@ -348,7 +346,7 @@ class FreeEnergy(object):
         # Return the total energy (including the correct scaling).
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
-        return 0.5 * Esde, dEsde_dm, dEsde_ds
+        return Esde, dEsde_dm, dEsde_ds
     # _end_def_
 
     def E_obs(self, mean_pts, vars_pts):
