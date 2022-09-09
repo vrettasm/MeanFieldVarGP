@@ -562,12 +562,14 @@ class FreeEnergy(object):
         """
         Optimizes the free energy value (E_cost) by using
         the "optimize.minimize()" function. The result is
-        the final sample (discrete) path.
+        the final set of optimization variables (mean and
+        variance Lagrange polynomials).
 
-        :param x0: initial path to start the minimization.
+        :param x0: initial set of variables to start the
+        minimization.
 
         :param check_gradients: boolean flag to determine
-        the checking of the gradients (before and after)
+        the checking of the gradients, before and after
         the minimization.
 
         :return: the optimal solution found by minimize().
@@ -614,7 +616,7 @@ class FreeEnergy(object):
         time_tf = time.perf_counter()
 
         # Print final duration in seconds.
-        print(f" Elapsed time: {(time_tf - time_t0):.2f} seconds.", end='\n')
+        print(f" Elapsed time: {(time_tf - time_t0):.2f} seconds.")
 
         # Check numerically the gradients.
         if check_gradients:
