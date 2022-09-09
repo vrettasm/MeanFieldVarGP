@@ -1,5 +1,7 @@
 import numpy as np
 from numba import njit
+from pathlib import Path
+from dill import load as dl_load
 from numpy import array as array_t
 from scipy.linalg import cholesky, LinAlgError
 from src.dynamical_systems.stochastic_process import StochasticProcess
@@ -254,6 +256,68 @@ class Lorenz63(StochasticProcess):
 
         # Store the time window (inference).
         self.time_window = tk
+
+    # _end_def_
+
+    def load_functions(self):
+        """
+        Auxiliary method that load the symbolic equations for the L3D system.
+        """
+
+        # Make sure to clear everything BEFORE we load the functions.
+        self.Esde.clear()
+        self.dEsde_dm.clear()
+        self.dEsde_ds.clear()
+
+        # Counter of the loaded equations.
+        eqn_counter = 0
+
+        # Get the parent folder of the file.
+        parent_dir = Path(__file__).resolve().parent
+
+        # Load all the dimension equations.
+        for i in range(3):
+
+            # Load the energy file.
+            with open(Path(parent_dir / f"energy_functions/L3D_Esde_{i}.sym"), "rb") as sym_Eqn:
+
+                # Append the energy function.
+                self.Esde.append(dl_load(sym_Eqn))
+
+                # Increase by one.
+                eqn_counter += 1
+
+            # _end_with_
+
+            # Load the mean-gradient file.
+            with open(Path(parent_dir / f"gradient_functions/dL3D_Esde_dM{i}.sym"), "rb") as sym_Eqn:
+
+                # Append the grad_DM function.
+                self.dEsde_dm.append(dl_load(sym_Eqn))
+
+                # Increase by one.
+                eqn_counter += 1
+
+            # _end_with_
+
+            # Load the variance-gradient file.
+            with open(Path(parent_dir / f"gradient_functions/dL3D_Esde_dS{i}.sym"), "rb") as sym_Eqn:
+
+                # Append the grad_DS function.
+                self.dEsde_ds.append(dl_load(sym_Eqn))
+
+                # Increase by one.
+                eqn_counter += 1
+
+            # _end_with_
+
+        # _end_for_
+
+        # Sanity check.
+        if eqn_counter != 9:
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Some symbolic equations failed to load [{eqn_counter}].")
+        # _end_if_
 
     # _end_def_
 

@@ -199,8 +199,8 @@ class DoubleWell(StochasticProcess):
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
 
-        # Counter of the loaded files.
-        file_counter = 0
+        # Counter of the loaded equations.
+        eqn_counter = 0
 
         # Get the parent folder of the file.
         parent_dir = Path(__file__).resolve().parent
@@ -212,7 +212,7 @@ class DoubleWell(StochasticProcess):
             self.Esde.append(dl_load(sym_Eqn))
 
             # Increase by one.
-            file_counter += 1
+            eqn_counter += 1
 
         # _end_with_
 
@@ -223,7 +223,7 @@ class DoubleWell(StochasticProcess):
             self.dEsde_dm.append(dl_load(sym_Eqn))
 
             # Increase by one.
-            file_counter += 1
+            eqn_counter += 1
 
         # _end_with_
 
@@ -234,14 +234,14 @@ class DoubleWell(StochasticProcess):
             self.dEsde_ds.append(dl_load(sym_Eqn))
 
             # Increase by one.
-            file_counter += 1
+            eqn_counter += 1
 
         # _end_with_
 
         # Sanity check.
-        if file_counter != 3:
+        if eqn_counter != 3:
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Some symbolic equations failed to load [{file_counter}].")
+                               f" Some symbolic equations failed to load [{eqn_counter}].")
         # _end_if_
 
     # _end_def_
