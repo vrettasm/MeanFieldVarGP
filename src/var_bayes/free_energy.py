@@ -14,7 +14,7 @@ class FreeEnergy(object):
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
                  h_operator: array_t = None):
         """
-        TBD ...
+        Default constructor of the FreeEnergy class.
 
         :param tk: (discrete) time-window of inference [t0, tf].
 
