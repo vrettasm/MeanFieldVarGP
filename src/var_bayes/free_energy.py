@@ -1,6 +1,8 @@
+import time
 import numpy as np
 from numpy import array as array_t
 from scipy.integrate import quad_vec
+from scipy.optimize import minimize, check_grad
 from src.numerical.utilities import cholesky_inv, log_det
 
 
@@ -468,7 +470,7 @@ class FreeEnergy(object):
         return 0.5 * Eobs, dEobs_dm, dEobs_ds
     # _end_def_
 
-    def E_cost(self, x):
+    def E_cost(self, x, output_gradients=True):
         """
         Total cost function value (scalar) and derivatives.
         This is passed to the "scipy" optimization routine:
@@ -477,6 +479,14 @@ class FreeEnergy(object):
 
         :param x: the optimization variables. Here we take the mean
         and variance points of the Lagrange polynomials.
+
+        :param output_gradients: boolean flag to whether include
+        the gradients in the output or not. This is used from the
+        minimize method to check the gradients.
+
+        NOTE: the gradients are computed anyway, regardless of the
+        boolean "output_gradients". This is because it speeds up
+        the minimization function.
 
         :return: total energy value and derivatives (w.r.t. the mean
         and variance points).
@@ -533,12 +543,94 @@ class FreeEnergy(object):
         # NOTE: This is element-wise multiplication.
         Ecost_ds *= vars_points
 
+        # Check if we want the gradients to be returned.
+        if not output_gradients:
+
+            # Exit here.
+            return Ecost
+        # _end_if_
+
         # Return the total (free) energy as the sum of the individual
         # components. NOTE: If we want to optimize the hyperparameter
         # we should add another term, e.g. E_param, and include it in
         # the total sum of energy values.
         return Ecost, np.concatenate((Ecost_dm.flatten(order='C'),
                                       Ecost_ds.flatten(order='C')), axis=0)
+    # _end_def_
+
+    def find_minimum(self, x0, check_gradients=False):
+        """
+        Optimizes the free energy value (E_cost) by using
+        the "optimize.minimize()" function. The result is
+        the final sample (discrete) path.
+
+        :param x0: initial path to start the minimization.
+
+        :param check_gradients: boolean flag to determine
+        the checking of the gradients (before and after)
+        the minimization.
+
+        :return: the optimal solution found by minimize().
+        """
+
+        def _analytic_grad_func(xin: array_t):
+            """
+            Locally defined gradient function.
+
+            Used only if check_gradients=True.
+
+            :param xin: The input we want to get
+                        the analytic gradient at.
+            """
+
+            # Runs the E_cost() with the default
+            # setting (i.e. output_gradients=True).
+            _, grad_A = self.E_cost(xin)
+
+            # Get the "analytic" gradient.
+            return grad_A
+
+        # _end_def_
+
+        # Check numerically the gradients.
+        if check_gradients:
+
+            # Get the grad-check error.
+            diff_error = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
+                                    _analytic_grad_func, x0.copy())
+
+            # Display the error.
+            print(f"Grad-Check error |BEFORE| minimization = {diff_error:.3E}\n")
+
+        # _end_if_
+
+        # Start the timer.
+        time_t0 = time.perf_counter()
+
+        # Run the optimization procedure.
+        opt_res = minimize(self.E_cost, x0, method='BFGS', jac=True)
+
+        # Stop the timer.
+        time_tf = time.perf_counter()
+
+        # Print final duration in seconds.
+        print(f" Elapsed time: {(time_tf - time_t0):.2f} seconds.", end='\n')
+
+        # Check numerically the gradients.
+        if check_gradients:
+
+            # Get the grad-check error.
+            diff_error = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
+                                    _analytic_grad_func, opt_res.x.copy())
+
+            # Display the error.
+            print(f"Grad-Check error |AFTER| minimization = {diff_error:.3E}\n")
+
+        # _end_if_
+
+        # Get the final (optimal) results.
+        return opt_res
+
     # _end_def_
 
 # _end_class_
