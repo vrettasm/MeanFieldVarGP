@@ -146,7 +146,8 @@ class FreeEnergy(object):
         """
         Accessor method (setter).
 
-        NOTE: This should be used only if we optimize the prior moments.
+        NOTE: This should be used only if we optimize
+        the prior moments.
 
         :param new_value: the new value we want to set.
 
@@ -170,7 +171,8 @@ class FreeEnergy(object):
         """
         Accessor method (setter).
 
-        NOTE: This should be used only if we optimize the prior moments.
+        NOTE: This should be used only if we optimize
+        the prior moments.
 
         :param new_value: the new value we want to set.
 
@@ -195,7 +197,8 @@ class FreeEnergy(object):
         """
         Accessor method (setter).
 
-        NOTE: This should be used only if we optimize the drift parameters.
+        NOTE: This should be used only if we optimize
+        the drift (theta) parameters.
 
         :param new_value: the new value we want to set.
 
@@ -219,7 +222,8 @@ class FreeEnergy(object):
         """
         Accessor method (setter).
 
-        NOTE: This should be used only if we optimize the diffusion parameters.
+        NOTE: This should be used only if we optimize
+        the diffusion (Sgima) parameters.
 
         :param new_value: the new value we want to set.
 
@@ -281,12 +285,18 @@ class FreeEnergy(object):
         :param vars_pts: optimized variance points.
 
         :return: Energy from the SDE prior process (scalar) and
-        its gradients with respect to the mean and variance points.
+        its gradients with respect to the mean & variance points.
         """
+
+        # Get the system dimensions once.
+        dim_D = self.dim_D
+
+        # Local observation times.
+        obs_times = self.obs_times
 
         # Number of discrete intervals
         # (between the observations).
-        L = self.obs_times.size - 1
+        L = obs_times.size - 1
 
         # Initialize energy for the SDE.
         Esde = 0.0
@@ -294,8 +304,8 @@ class FreeEnergy(object):
         # Initialize gradients arrays.
         # > dEsde_dm := dEsde(tk)/dm(tk)
         # > dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = np.zeros(L, 4*self.dim_D)
-        dEsde_ds = np.zeros(L, 3*self.dim_D)
+        dEsde_dm = np.zeros(L, 4*dim_D)
+        dEsde_ds = np.zeros(L, 3*dim_D)
 
         # Inverted diagonal noise vector.
         inv_sigma = 1.0 / self.sigma
@@ -304,7 +314,7 @@ class FreeEnergy(object):
         for n in range(L):
 
             # Take the limits of the observation's interval.
-            ti, tj = self.obs_times[n], self.obs_times[n+1]
+            ti, tj = obs_times[n], obs_times[n+1]
 
             # NOTE: This should not change for equally spaced
             # observations. This is here to ensure that small
@@ -337,20 +347,27 @@ class FreeEnergy(object):
             # additional input parameters except the time "t".
             #
             # Scale the (partial) energy with the inverse noise.
+            # Allow parallel integration by setting 'workers=N'.
             Esde += quad_vec(lambda t: self.drift_fun_sde(t, *params),
-                             ti, tj)[0].dot(inv_sigma)
+                             ti, tj, workers=4)[0].dot(inv_sigma)
 
-            # Solve the integrals of dEsde(t)/dMp, dEsde(t)/dSp in [ti, tj].
-            ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params), ti, tj)[0]
-            ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params), ti, tj)[0]
+            # Solve the integrals of dEsde(t)/dMp in [ti, tj].
+            # Allow parallel integration by setting 'workers=N'.
+            ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params),
+                                 ti, tj, workers=4)[0]
+
+            # Solve the integrals of dEsde(t)/dSp in [ti, tj].
+            # Allow parallel integration by setting 'workers=N'.
+            ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
+                                 ti, tj, workers=4)[0]
 
             # Local accumulators. These will be used to sum the
             # gradients over all the system dimensions "dim_D".
-            dEn_dm_acc = np.zeros(4*self.dim_D, dtype=float)
-            dEn_ds_acc = np.zeros(3*self.dim_D, dtype=float)
+            dEn_dm_acc = np.zeros(4*dim_D, dtype=float)
+            dEn_ds_acc = np.zeros(3*dim_D, dtype=float)
 
             # Add the gradients from all dimensions.
-            for i in range(self.dim_D):
+            for i in range(dim_D):
 
                 # Mean-point derivatives.
                 dEn_dm_acc += ig_dEn_dm[i] * inv_sigma[i]
@@ -458,11 +475,11 @@ class FreeEnergy(object):
 
          --> minimize(E_cost, x0, method="BFGS", jac=True)
 
-        :param x: the optimization variables. Here we take
-        the mean and variance points of the Lagrange polynomials.
+        :param x: the optimization variables. Here we take the mean
+        and variance points of the Lagrange polynomials.
 
-        :return: total energy value and derivatives (w.r.t.
-        the mean and variance points).
+        :return: total energy value and derivatives (w.r.t. the mean
+        and variance points).
         """
 
         # Separate the mean from the variance points.
@@ -487,20 +504,20 @@ class FreeEnergy(object):
         # Energy from the observations' likelihood (and gradients).
         Eobs, dEobs_dm, dEobs_ds = self.E_obs(mean_points[:, self.ikm],
                                               vars_points[:, self.iks])
-        # Put all the energy values together.
+        # Put all energy values together.
         Ecost = E0 + Esde + Eobs
 
-        # Put the gradients together.
+        # Put all gradients together.
         Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtyp=float)
         Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtyp=float)
 
-        # Number of discrete intervals.
-        L = self.obs_times.size - 1
+        # Localize reshape function (for speed up).
+        reshape_ = np.reshape
 
         # We need to reshape the gradients of Esde.
-        for n in range(L):
-            Ecost_dm[:, (3 * n): (3 * n) + 4] = np.reshape(dEsde_dm[n], (self.dim_D, 4))
-            Ecost_ds[:, (2 * n): (2 * n) + 3] = np.reshape(dEsde_ds[n], (self.dim_D, 3))
+        for n in range(self.obs_times.size - 1):
+            Ecost_dm[:, (3 * n): (3 * n) + 4] = reshape_(dEsde_dm[n], (self.dim_D, 4))
+            Ecost_ds[:, (2 * n): (2 * n) + 3] = reshape_(dEsde_ds[n], (self.dim_D, 3))
         # _end_for_
 
         # Add the initial contribution from KL0.
