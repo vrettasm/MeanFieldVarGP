@@ -34,11 +34,12 @@ class StochasticProcess(object):
         # Time-window.
         self.tk = None
 
-        # Initialize the energy and gradient dictionaries. These will
-        # hold the "lambdafied" functions for each dynamical system.
-        self.Esde = {}
-        self.dEsde_dm = {}
-        self.dEsde_ds = {}
+        # Initialize the energy and gradient lists.
+        # These will hold the lambdafied functions
+        # (for each dynamical system).
+        self.Esde = []
+        self.dEsde_dm = []
+        self.dEsde_ds = []
     # _end_def_
 
     @property
@@ -220,15 +221,15 @@ class StochasticProcess(object):
 
     def energy(self, t, *args):
         """
-        Wrapper method. This method wraps the "lambdafied" energy
-        function (for each specific dynamical system) and passes
+        Wrapper method. This method wraps the lambdafied gradient
+        function, (for each specific dynamical system) and passes
         the output in the numerical quadrature algorithm.
 
-        The first argument 't' is the one that the quadrature is
-        based on. All the other parameters are considered fixed
-        during the integration.
+        The first argument 't' (time) is the one that the quadrature
+        is using to compute the integral. All other input parameters
+        are fixed during the integration.
 
-        Below we can see the lambdafied function signature. The
+        Below we can find the lambdafied function signature. The
         parameters must be passed in the exact same order.
 
         args = [ℎ0, ℎ1, ℎ2, ℎ3, 𝑐0, 𝑐1, 𝑐2,
@@ -254,34 +255,25 @@ class StochasticProcess(object):
         :return: Esde vector (dim_D,).
         """
 
-        # List of energy values.
-        total_energy = []
+        # Collect all energy values (from all dimensions).
+        energy_vec = [eF_(t, *args) for eF_ in self.Esde]
 
-        # Localise append function.
-        total_energy_append = total_energy.append
-
-        # Run through all energy function.
-        for En in self.Esde.values():
-
-            # Get the output of the lambdafied func.
-            total_energy_append(En(t, *args))
-        # _end_for_
-
-        # Return the list as numpy array.
-        return np.array(total_energy, dtype=float)
+        # Return the list as numpy array (float).
+        return np.array(energy_vec, dtype=float)
     # _end_def_
 
     def grad_mean(self, t, *args):
         """
-        Wrapper method. This method wraps the "lambdafied" gradient
-        function (for each specific dynamical system) and passes the
-        output in the numerical quadrature algorithm.
+        Wrapper method. This method wraps the lambdafied gradient
+        function, (for each specific dynamical system) and passes
+        the output in the numerical quadrature algorithm.
 
-        The first argument 't' is the one that the quadrature is based on.
-        All the other parameters are considered fixed during the integration.
+        The first argument 't' (time) is the one that the quadrature
+        is using to compute the integral. All other input parameters
+        are fixed during the integration.
 
-        Below we can see the lambdafied function signature. The parameters
-        must be passed in the exact same order.
+        Below we can find the lambdafied function signature. The
+        parameters must be passed in the exact same order.
 
         args = [ℎ0, ℎ1, ℎ2, ℎ3, 𝑐0, 𝑐1, 𝑐2,
                 𝑑0𝑚0, 𝑑0𝑚1, 𝑑0𝑚2, 𝑑0𝑚3,
@@ -306,34 +298,25 @@ class StochasticProcess(object):
         :return: dEsde_dm vector (4*dim_D,).
         """
 
-        # List of energy values.
-        total_grad = []
+        # List of gradient values.
+        grad_vec = [gM_(t, *args) for gM_ in self.dEsde_dm]
 
-        # Localise append function.
-        total_grad_append = total_grad.append
-
-        # Run through all energy function.
-        for gm_ in self.dEsde_dm.values():
-
-            # Get the output of the lambdafied func.
-            total_grad_append(gm_(t, *args))
-        # _end_for_
-
-        # Return the list as numpy array.
-        return np.array(total_grad, dtype=float)
+        # Return the list as numpy array (float).
+        return np.array(grad_vec, dtype=float)
     # _end_def_
 
     def grad_variance(self, t, *args):
         """
-        Wrapper method. This method wraps the "lambdafied" gradient
-        function (for each specific dynamical system) and passes the
-        output in the numerical quadrature algorithm.
+        Wrapper method. This method wraps the lambdafied gradient
+        function, (for each specific dynamical system) and passes
+        the output in the numerical quadrature algorithm.
 
-        The first argument 't' is the one that the quadrature is based on.
-        All the other parameters are considered fixed during the integration.
+        The first argument 't' (time) is the one that the quadrature
+        is using to compute the integral. All other input parameters
+        are fixed during the integration.
 
-        Below we can see the lambdafied function signature. The parameters
-        must be passed in the exact same order.
+        Below we can find the lambdafied function signature. The
+        parameters must be passed in the exact same order.
 
         params = [ℎ0, ℎ1, ℎ2, ℎ3, 𝑐0, 𝑐1, 𝑐2,
                   𝑑0𝑚0, 𝑑0𝑚1, 𝑑0𝑚2, 𝑑0𝑚3,
@@ -358,21 +341,11 @@ class StochasticProcess(object):
         :return: dEsde_ds vector (3*dim_D,).
         """
 
-        # List of energy values.
-        total_grad = []
+        # List of gradient values.
+        grad_vec = [gS_(t, *args) for gS_ in self.dEsde_ds]
 
-        # Localise append function.
-        total_grad_append = total_grad.append
-
-        # Run through all energy function.
-        for gs_ in self.dEsde_ds.values():
-
-            # Get the output of the lambdafied func.
-            total_grad_append(gs_(t, *args))
-        # _end_for_
-
-        # Return the list as numpy array.
-        return np.array(total_grad, dtype=float)
+        # Return the list as numpy array (float).
+        return np.array(grad_vec, dtype=float)
     # _end_def_
 
 # _end_class_
