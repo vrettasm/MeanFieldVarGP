@@ -202,11 +202,11 @@ class DoubleWell(StochasticProcess):
         # Counter of the loaded equations.
         eqn_counter = 0
 
-        # Get the parent folder of the file.
-        parent_dir = Path(__file__).resolve().parent
+        # Get the current directory of the file.
+        current_dir = Path(__file__).resolve().cwd()
 
         # Load the energy file.
-        with open(Path(parent_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_Eqn:
+        with open(Path(current_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_Eqn:
 
             # Append the energy function.
             self.Esde.append(dl_load(sym_Eqn))
@@ -217,7 +217,7 @@ class DoubleWell(StochasticProcess):
         # _end_with_
 
         # Load the mean-gradient file.
-        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dM0.sym"), "rb") as sym_Eqn:
+        with open(Path(current_dir / "gradient_functions/dDW_Esde_dM0.sym"), "rb") as sym_Eqn:
 
             # Append the grad_DM function.
             self.dEsde_dm.append(dl_load(sym_Eqn))
@@ -228,7 +228,7 @@ class DoubleWell(StochasticProcess):
         # _end_with_
 
         # Load the variance-gradient file.
-        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dS0.sym"), "rb") as sym_Eqn:
+        with open(Path(current_dir / "gradient_functions/dDW_Esde_dS0.sym"), "rb") as sym_Eqn:
 
             # Append the grad_DS function.
             self.dEsde_ds.append(dl_load(sym_Eqn))
