@@ -4,59 +4,6 @@ from numpy import array as array_t
 from numpy.linalg import solve, cholesky, LinAlgError
 
 
-def finite_diff(fun, x: array_t, *args):
-    """
-    Calculates the approximate derivative of function "fun"
-    on a parameter vector "x". A central difference formula
-    with step size "h" is used, and the result is returned
-    in vector "grad_n".
-
-    :param fun: the objective function that we want to check.
-
-    :param x: the point where we want to check the gradient.
-
-    :param args: additional function parameters.
-
-    :return: the gradient calculated numerically.
-    """
-
-    # Make sure input is at least 1-D.
-    x = np.atleast_1d(x)
-
-    # Number of input parameters.
-    dim_x = x.shape[0]
-
-    # Gradient vector.
-    grad_n = np.zeros(dim_x)
-
-    # Step size.
-    delta_h = 1.0e-6
-
-    # Unit vector.
-    e = np.zeros(dim_x)
-
-    # Iterate over all the dimensions.
-    for i in range(dim_x):
-        # Turn ON the i-th dimension.
-        e[i] = delta_h
-
-        # Move a small way 'x + dh'.
-        f_p = fun(x + e, *args)
-
-        # Move a small way 'x - dh'.
-        f_m = fun(x - e, *args)
-
-        # Use central difference formula.
-        grad_n[i] = 0.5 * (f_p - f_m) / delta_h
-
-        # Turn OFF the i-th dimension.
-        e[i] = 0.0
-    # _end_for_
-
-    # Return the numerical gradient.
-    return grad_n[0] if dim_x == 1 else grad_n
-# _end_def_
-
 def log_det(x: array_t):
     """
     Returns the log(det(x)), but more stable and accurate.
@@ -314,4 +261,6 @@ def unscented_approximation(fun, x_bar, x_cov, *args):
 
     # New (mean / covariance).
     return y_bar, y_cov
+# _end_def_
+
 # _end_def_
