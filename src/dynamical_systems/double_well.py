@@ -1,6 +1,6 @@
-import dill
 import numpy as np
 from pathlib import Path
+from dill import load as dl_load
 from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -190,30 +190,59 @@ class DoubleWell(StochasticProcess):
     # _end_def_
 
     def load_functions(self):
+        """
+        Auxiliary method that load the symbolic equations for the DW system.
+        """
+
+        # Make sure to clear everything BEFORE we load the functions.
+        self.Esde.clear()
+        self.dEsde_dm.clear()
+        self.dEsde_ds.clear()
+
+        # Counter of the loaded files.
+        file_counter = 0
 
         # Get the parent folder of the file.
         parent_dir = Path(__file__).resolve().parent
 
         # Load the energy file.
-        with open(Path(parent_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_file_1:
+        with open(Path(parent_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_Eqn:
 
-            self.Esde[0] = dill.load(sym_file_1)
+            # Append the energy function.
+            self.Esde.append(dl_load(sym_Eqn))
+
+            # Increase by one.
+            file_counter += 1
 
         # _end_with_
 
         # Load the mean-gradient file.
-        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dM0.sym.sym"), "rb") as sym_file_2:
+        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dM0.sym.sym"), "rb") as sym_Eqn:
 
-            self.dEsde_dm[0] = dill.load(sym_file_2)
+            # Append the grad_DM function.
+            self.dEsde_dm.append(dl_load(sym_Eqn))
+
+            # Increase by one.
+            file_counter += 1
 
         # _end_with_
 
         # Load the variance-gradient file.
-        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dS0.sym.sym"), "rb") as sym_file_3:
+        with open(Path(parent_dir / "gradient_functions/dDW_Esde_dS0.sym.sym"), "rb") as sym_Eqn:
 
-            self.dEsde_ds[0] = dill.load(sym_file_3)
+            # Append the grad_DS function.
+            self.dEsde_ds.append(dl_load(sym_Eqn))
+
+            # Increase by one.
+            file_counter += 1
 
         # _end_with_
+
+        # Sanity check.
+        if file_counter != 3:
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Some symbolic equations failed to load [{file_counter}].")
+        # _end_if_
 
     # _end_def_
 
