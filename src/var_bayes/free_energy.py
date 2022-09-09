@@ -598,11 +598,11 @@ class FreeEnergy(object):
         if check_gradients:
 
             # Get the grad-check error.
-            diff_error = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
-                                    _analytic_grad_func, x0.copy())
+            error_t0 = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
+                                  _analytic_grad_func, x0.copy())
 
             # Display the error.
-            print(f"Grad-Check error |BEFORE| minimization = {diff_error:.3E}\n")
+            print(f"Grad-Check error |BEFORE| minimization = {error_t0:.3E}\n")
 
         # _end_if_
 
@@ -622,11 +622,11 @@ class FreeEnergy(object):
         if check_gradients:
 
             # Get the grad-check error.
-            diff_error = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
-                                    _analytic_grad_func, opt_res.x.copy())
+            error_tf = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
+                                  _analytic_grad_func, opt_res.x.copy())
 
             # Display the error.
-            print(f"Grad-Check error |AFTER| minimization = {diff_error:.3E}\n")
+            print(f"Grad-Check error |AFTER| minimization = {error_tf:.3E}\n")
 
         # _end_if_
 
