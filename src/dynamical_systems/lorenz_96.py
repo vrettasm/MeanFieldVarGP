@@ -1,7 +1,6 @@
 import numpy as np
 from numba import njit
 from numpy import array as array_t
-from scipy.linalg import cholesky, LinAlgError
 from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -134,16 +133,16 @@ class Lorenz96(StochasticProcess):
 
         # Check the dimensions of the input.
         if sigma.ndim == 0:
-            # Diagonal matrix (from scalar).
-            self._sigma = sigma * np.eye(dim_d)
+            # Vector (from scalar).
+            self._sigma = sigma * np.ones(dim_d)
 
         elif sigma.ndim == 1:
-            # Diagonal matrix (from vector).
-            self._sigma = np.diag(sigma)
+            # Copy the vector.
+            self._sigma = sigma
 
         elif sigma.ndim == 2:
-            # Full matrix.
-            self._sigma = sigma
+            # From full Matrix keep only the diagonal.
+            self._sigma = sigma.diagonal()
 
         else:
             raise ValueError(f" {self.__class__.__name__}:"
@@ -151,16 +150,16 @@ class Lorenz96(StochasticProcess):
         # _end_if_
 
         # Check the dimensionality.
-        if self._sigma.shape != (dim_d, dim_d):
+        if len(self._sigma) != dim_d:
             raise ValueError(f" {self.__class__.__name__}:"
                              f" Wrong matrix dimensions: {self._sigma.shape}")
         # _end_if_
 
         # Check for positive definiteness.
-        if np.all(np.linalg.eigvals(self._sigma) > 0.0):
+        if np.all(self._sigma > 0.0):
 
             # Invert Sigma matrix.
-            self._sigma_inverse = np.linalg.inv(self._sigma)
+            self._sigma_inverse = 1.0 / self._sigma
         else:
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Noise matrix {self._sigma} is not positive definite.")
@@ -212,22 +211,25 @@ class Lorenz96(StochasticProcess):
         :return: None.
         """
 
+        # Make sure the input is array.
+        new_value = np.asarray(new_value, dtype=float)
+
         # Check the dimensionality.
-        if new_value.shape != (self.dim_d, self.dim_d):
+        if new_value.shape != (self.dim_d,):
             raise ValueError(f" {self.__class__.__name__}:"
-                             f" Wrong matrix dimensions: {new_value.shape}")
+                             f" Wrong vector dimensions: {new_value.shape}.")
         # _end_if_
 
         # Check for positive definiteness.
-        if np.all(np.linalg.eigvals(new_value) > 0.0):
+        if np.all(new_value > 0.0):
             # Make the change.
             self._sigma = new_value
 
             # Update the inverse matrix.
-            self._sigma_inverse = np.linalg.inv(self._sigma)
+            self._sigma_inverse = 1.0 / self._sigma
         else:
-            raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Noise matrix {new_value} is not positive definite.")
+            raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
+                               f" {new_value} is not positive definite.")
         # _end_if_
     # _end_def_
 
@@ -281,27 +283,19 @@ class Lorenz96(StochasticProcess):
         # Start with the new point.
         x[0] = x0
 
-        # Compute the Cholesky decomposition of input matrix.
-        try:
-            # Notice the scaling with 'dt'.
-            ek = cholesky(self._sigma * dt)
+        # Compute the sqrt of noise.
+        # NOTE: the scaling with 'dt'.
+        ek = np.sqrt(self._sigma * dt)
 
-        except LinAlgError:
+        # Repeat the vector for the multiplication.
+        ek = np.repeat(ek, dim_t).reshape(self.dim_d, dim_t)
 
-            # Show a warning message.
-            print(" Warning : The input matrix was not positive definite."
-                  " The diagonal elements will be used instead.")
-
-            # If it fails use only the diagonal elements.
-            ek = np.sqrt(np.eye(self.dim_d) * self._sigma * dt)
-        # _end_try_
-
-        # Random variables.
-        ek = ek.dot(self.rng.standard_normal((self.dim_d, dim_t))).T
+        # Multiply with random variables from N(0, 1).
+        ek = ek * self.rng.standard_normal((self.dim_d, dim_t))
 
         # Create the path by solving the SDE iteratively.
         for t in range(1, dim_t):
-            x[t] = x[t - 1] + _l96(x[t - 1], self._theta) * dt + ek[t]
+            x[t] = x[t - 1] + _l96(x[t - 1], self._theta) * dt + ek.T[t]
         # _end_for_
 
         # Store the sample path (trajectory).

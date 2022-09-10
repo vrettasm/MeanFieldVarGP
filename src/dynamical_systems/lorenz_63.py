@@ -3,7 +3,6 @@ from numba import njit
 from pathlib import Path
 from dill import load as dl_load
 from numpy import array as array_t
-from scipy.linalg import cholesky, LinAlgError
 from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -49,7 +48,8 @@ class Lorenz63(StochasticProcess):
         """
         Default constructor of the L63 object.
 
-        :param sigma: (numpy array) noise diffusion coefficient.
+        :param sigma: (numpy array) noise diffusion coefficient. These
+        are diagonal elements (variances) from a full matrix.
 
         :param theta: (numpy array) drift model vector.
 
@@ -68,16 +68,16 @@ class Lorenz63(StochasticProcess):
 
         # Check the dimensions of the input.
         if sigma.ndim == 0:
-            # Diagonal matrix (from scalar).
-            self._sigma = sigma * np.eye(3)
+            # Vector (from scalar).
+            self._sigma = sigma * np.ones(3)
 
         elif sigma.ndim == 1:
-            # Diagonal matrix (from vector).
-            self._sigma = np.diag(sigma)
+            # Copy the vector.
+            self._sigma = sigma
 
         elif sigma.ndim == 2:
-            # Full Matrix.
-            self._sigma = sigma
+            # From full Matrix keep only the diagonal.
+            self._sigma = sigma.diagonal()
 
         else:
             raise ValueError(f" {self.__class__.__name__}:"
@@ -85,16 +85,16 @@ class Lorenz63(StochasticProcess):
         # _end_if_
 
         # Check for the correct matrix dimensions.
-        if self._sigma.shape != (3, 3):
+        if len(self._sigma) != 3:
             raise ValueError(f" {self.__class__.__name__}:"
-                             f" Wrong matrix dimensions: {self._sigma.shape}")
+                             f" Wrong vector dimensions: {self._sigma.shape}")
         # _end_if_
 
         # Check for positive definiteness.
-        if np.all(np.linalg.eigvals(self._sigma) > 0.0):
+        if np.all(self._sigma > 0.0):
 
-            # Invert the sigma matrix.
-            self._sigma_inverse = np.linalg.inv(self._sigma)
+            # Invert the sigma coefficients.
+            self._sigma_inverse = 1.0 / self._sigma
         else:
             raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
                                f" {self._sigma} is not positive definite.")
@@ -160,18 +160,18 @@ class Lorenz63(StochasticProcess):
         new_value = np.asarray(new_value, dtype=float)
 
         # Check the dimensionality.
-        if new_value.shape != (3, 3):
+        if new_value.shape != (3,):
             raise ValueError(f" {self.__class__.__name__}:"
-                             f" Wrong matrix dimensions: {new_value.shape}.")
+                             f" Wrong vector dimensions: {new_value.shape}.")
         # _end_if_
 
         # Check for positive definiteness.
-        if np.all(np.linalg.eigvals(new_value) > 0.0):
+        if np.all(new_value > 0.0):
             # Make the change.
             self._sigma = new_value
 
-            # Update the inverse matrix.
-            self._sigma_inverse = np.linalg.inv(self._sigma)
+            # Update the inverse matrix elements.
+            self._sigma_inverse = 1.0 / self._sigma
         else:
             raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
                                f" {new_value} is not positive definite.")
@@ -184,7 +184,7 @@ class Lorenz63(StochasticProcess):
         """
         Accessor method (getter).
 
-        :return: the inverse of diffusion noise matrix.
+        :return: the inverse of diffusion noise vector.
         """
         return self._sigma_inverse
 
@@ -228,27 +228,19 @@ class Lorenz63(StochasticProcess):
         # Start the sample path with the new point.
         x[0] = x0
 
-        # Compute the Cholesky decomposition of noise matrix.
-        try:
-            # Notice the scaling with 'dt'.
-            ek = cholesky(self._sigma * dt)
+        # Compute the sqrt of noise.
+        # NOTE: the scaling with 'dt'.
+        ek = np.sqrt(self._sigma * dt)
 
-        except LinAlgError:
+        # Repeat the vector for the multiplication.
+        ek = np.repeat(ek, dim_t).reshape(3, dim_t)
 
-            # Show a warning message.
-            print(" Warning : Input matrix was not positive definite."
-                  " The diagonal elements will be used instead.")
-
-            # If it fails use only the diagonal elements.
-            ek = np.sqrt(np.eye(3) * self._sigma * dt)
-        # _end_try_
-
-        # Random variables.
-        ek = ek.dot(self.rng.standard_normal((3, dim_t))).T
+        # Multiply with random variables from N(0, 1).
+        ek = ek * self.rng.standard_normal((3, dim_t))
 
         # Create the path by solving the SDE iteratively.
         for t in range(1, dim_t):
-            x[t] = x[t-1] + _l63(x[t-1], self._theta) * dt + ek[t]
+            x[t] = x[t-1] + _l63(x[t-1], self._theta) * dt + ek.T[t]
         # _end_for_
 
         # Store the sample path (trajectory).
