@@ -27,9 +27,6 @@ class DoubleWell(StochasticProcess):
         # Call the constructor of the parent class.
         super().__init__(r_seed=r_seed)
 
-        # Display class info.
-        print(" Creating Double-Well process.")
-
         # Check for the correct type.
         if isinstance(sigma, float):
 
