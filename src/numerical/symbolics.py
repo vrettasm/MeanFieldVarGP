@@ -121,7 +121,7 @@ def get_local_polynomials():
         where 't' is the time we want to evaluate the functions and:
 
             [h0, h1, h2, h3] -> [t+h0, t+h1, t+h2, t+h3]
-            [c0, c1, c2, h3] -> [t+c0, t+c1, t+c2, t+h3]
+            [c0, c1, c2] -> [t+c0, t+c1, t+c2]
 
         these are the fixed times of the support points:
 
