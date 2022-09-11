@@ -3,7 +3,7 @@ import numpy as np
 from numpy import array as array_t
 from scipy.integrate import quad_vec
 from scipy.optimize import minimize, check_grad
-from src.numerical.utilities import cholesky_inv, log_det
+from numerical.utilities import cholesky_inv, log_det
 
 
 class FreeEnergy(object):
@@ -306,8 +306,8 @@ class FreeEnergy(object):
         # Initialize gradients arrays.
         # > dEsde_dm := dEsde(tk)/dm(tk)
         # > dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = np.zeros(L, 4*dim_D)
-        dEsde_ds = np.zeros(L, 3*dim_D)
+        dEsde_dm = np.zeros((L, 4*dim_D), dtype=float)
+        dEsde_ds = np.zeros((L, 3*dim_D), dtype=float)
 
         # Inverted diagonal noise vector.
         inv_sigma = 1.0 / self.sigma
@@ -432,8 +432,8 @@ class FreeEnergy(object):
         Eobs = 0.0
 
         # Initialize gradients arrays.
-        dEobs_dm = np.zeros(self.dim_D, self.num_M)
-        dEobs_ds = np.zeros(self.dim_D, self.num_M)
+        dEobs_dm = np.zeros((self.dim_D, self.num_M))
+        dEobs_ds = np.zeros((self.dim_D, self.num_M))
 
         # Calculate partial energies from all 'M' observations.
         # NOTE: The gradients are given by:
