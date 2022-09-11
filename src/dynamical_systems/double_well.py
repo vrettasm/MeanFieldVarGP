@@ -60,6 +60,8 @@ class DoubleWell(StochasticProcess):
                             f" should be floating point number.")
         # _end_if_
 
+        # Load the energy functions.
+        self._load_functions()
     # _end_def_
 
     @property
@@ -186,7 +188,7 @@ class DoubleWell(StochasticProcess):
         self.time_window = tk
     # _end_def_
 
-    def load_functions(self):
+    def _load_functions(self):
         """
         Auxiliary method that load the symbolic equations for the DW system.
         """
@@ -200,7 +202,7 @@ class DoubleWell(StochasticProcess):
         eqn_counter = 0
 
         # Get the current directory of the file.
-        current_dir = Path(__file__).resolve().cwd()
+        current_dir = Path(__file__).resolve().parent
 
         # Load the energy file.
         with open(Path(current_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_Eqn:

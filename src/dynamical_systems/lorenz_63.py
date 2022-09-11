@@ -110,6 +110,9 @@ class Lorenz63(StochasticProcess):
                                f" {self._theta} is not [3 x 1].")
         # _end_if_
 
+        # Load the energy functions.
+        self._load_functions()
+
     # _end_def_
 
     @property
@@ -251,7 +254,7 @@ class Lorenz63(StochasticProcess):
 
     # _end_def_
 
-    def load_functions(self):
+    def _load_functions(self):
         """
         Auxiliary method that load the symbolic equations for the L3D system.
         """
@@ -265,7 +268,7 @@ class Lorenz63(StochasticProcess):
         eqn_counter = 0
 
         # Get the current directory of the file.
-        current_dir = Path(__file__).resolve().cwd()
+        current_dir = Path(__file__).resolve().parent
 
         # Load all the dimension equations.
         for i in range(3):

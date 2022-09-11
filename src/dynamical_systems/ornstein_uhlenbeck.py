@@ -68,6 +68,9 @@ class OrnsteinUhlenbeck(StochasticProcess):
                             f" should be floating point number.")
         # _end_if_
 
+        # Load the energy functions.
+        self._load_functions()
+
     # _end_def_
 
     @property
@@ -197,7 +200,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         self.time_window = tk
     # _end_def_
 
-    def load_functions(self):
+    def _load_functions(self):
         """
         Auxiliary method that load the symbolic equations for the OU system.
         """
@@ -211,7 +214,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         eqn_counter = 0
 
         # Get the current directory of the file.
-        current_dir = Path(__file__).resolve().cwd()
+        current_dir = Path(__file__).resolve().parent
 
         # Load the energy file.
         with open(Path(current_dir / "energy_functions/OU_Esde_0.sym"), "rb") as sym_Eqn:
