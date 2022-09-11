@@ -1,7 +1,7 @@
 import numpy as np
 from pathlib import Path
 from dill import load as dl_load
-from src.dynamical_systems.stochastic_process import StochasticProcess
+from dynamical_systems.stochastic_process import StochasticProcess
 
 
 class OrnsteinUhlenbeck(StochasticProcess):

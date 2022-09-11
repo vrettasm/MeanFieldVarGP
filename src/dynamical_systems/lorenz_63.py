@@ -3,7 +3,7 @@ from numba import njit
 from pathlib import Path
 from dill import load as dl_load
 from numpy import array as array_t
-from src.dynamical_systems.stochastic_process import StochasticProcess
+from dynamical_systems.stochastic_process import StochasticProcess
 
 
 @njit

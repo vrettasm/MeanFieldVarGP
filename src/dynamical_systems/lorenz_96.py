@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 from numpy import array as array_t
-from src.dynamical_systems.stochastic_process import StochasticProcess
+from dynamical_systems.stochastic_process import StochasticProcess
 
 
 @njit
