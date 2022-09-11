@@ -45,7 +45,7 @@ def LagrangePolynomial(letter: str = "m", order: int = 3, fp: str = "t"):
     # Sanity check.
     if order < 0:
         raise ValueError(f" LagrangePolynomial({letter}, {order}):"
-                         " Order value can't be negative.")
+                          " Order value can't be negative.")
     # _end_if_
 
     # Define the time variable 't' as symbol.
@@ -125,11 +125,13 @@ def get_local_polynomials():
 
         these are the fixed times of the support points:
 
-            [m0, m1, m2, m3] -> [m(t+h0), m1(t+h1), m(t+h2), m(t+h3)]
+            [m0, m1, m2, m3] -> [m(t+h0), m(t+h1), m(t+h2), m(t+h3)]
             [s0, s1, s2] -> [s(t+c0), s(t+c1), s(t+c2)]
 
         The support points are the optimized variables of the mean
         field algorithm.
+
+    :return: the local polynomials m(t) and s(t) as lambda functions.
     """
 
     # Create the mean / variance polynomials (with fixed orders).
