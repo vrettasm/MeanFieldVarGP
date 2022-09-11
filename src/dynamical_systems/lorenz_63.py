@@ -122,7 +122,7 @@ class Lorenz63(StochasticProcess):
 
         :return: the drift parameter.
         """
-        return self._theta
+        return np.atleast_1d(self._theta)
 
     # _end_def_
 
@@ -145,7 +145,7 @@ class Lorenz63(StochasticProcess):
 
         :return: the system noise parameter.
         """
-        return self._sigma
+        return np.atleast_1d(self._sigma)
 
     # _end_def_
 
@@ -189,7 +189,7 @@ class Lorenz63(StochasticProcess):
 
         :return: the inverse of diffusion noise vector.
         """
-        return self._sigma_inverse
+        return np.atleast_1d(self._sigma_inverse)
 
     # _end_def_
 

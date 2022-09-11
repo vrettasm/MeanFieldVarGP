@@ -71,7 +71,7 @@ class DoubleWell(StochasticProcess):
 
         :return: the drift parameter.
         """
-        return self._theta
+        return np.atleast_1d(self._theta)
     # _end_def_
 
     @theta.setter
@@ -95,7 +95,7 @@ class DoubleWell(StochasticProcess):
 
         :return: the diffusion noise parameter.
         """
-        return self._sigma
+        return np.atleast_1d(self._sigma)
     # _end_def_
 
     @sigma.setter
@@ -134,7 +134,7 @@ class DoubleWell(StochasticProcess):
 
         :return: the inverse of diffusion noise parameter.
         """
-        return self._sigma_inverse
+        return np.atleast_1d(self._sigma_inverse)
     # _end_def_
 
     def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
