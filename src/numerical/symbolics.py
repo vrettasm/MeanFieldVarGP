@@ -1,4 +1,5 @@
 import sympy as sym
+from sympy.utilities.iterables import flatten
 
 
 def LagrangePolynomial(letter: str = "m", order: int = 3, fp: str = "t"):
@@ -96,4 +97,51 @@ def LagrangePolynomial(letter: str = "m", order: int = 3, fp: str = "t"):
 
     # Return all the symbolic variables.
     return poly_func, t, xi, ti
+# _end_def_
+
+def get_local_polynomials():
+    """
+    Generates one local polynomial function for the marginal means m(t)
+    and one for the marginal variance function s(t). These are computed
+    with LagrangePolynomial function, and they are returned as lambdas.
+
+    These are used to reconstruct the final mean and variance functions
+    after the minimization of the free energy has occurred. Since the
+    order of the polynomials does not change the final expressions will
+    be the same for each dimension. So we can call repeatedly these m(t)
+    and s(t) for each dimension to reconstruct the whole mean and vars
+    function.
+
+    Note:
+        The signatures of the generated functions are as follows:
+
+        1) m(t) -> m(t, h0, h1, h2, h3, m0, m1, m2, m3)
+        2) s(t) -> s(t, c0, c1, c2, s0, s1, s2)
+
+        where 't' is the time we want to evaluate the functions and:
+
+            [h0, h1, h2, h3] -> [t+h0, t+h1, t+h2, t+h3]
+            [c0, c1, c2, h3] -> [t+c0, t+c1, t+c2, t+h3]
+
+        these are the fixed times of the support points:
+
+            [m0, m1, m2, m3] -> [m(t+h0), m1(t+h1), m(t+h2), m(t+h3)]
+            [s0, s1, s2] -> [s(t+c0), s(t+c1), s(t+c2)]
+
+        The support points are the optimized variables of the mean
+        field algorithm.
+    """
+
+    # Create the mean / variance polynomials (with fixed orders).
+    mt, t, mk, t_h = LagrangePolynomial(letter="m", order=3, fp="h")
+    st, t, sk, t_c = LagrangePolynomial(letter="s", order=2, fp="c")
+
+    # Generate a lambda function for m(t) and s(t).
+    local_mt = sym.lambdify([t, *flatten([t_h, mk])], mt,
+                            modules=["scipy", "numpy"], cse=True)
+
+    local_st = sym.lambdify([t, *flatten([t_c, sk])], st,
+                            modules=["scipy", "numpy"], cse=True)
+    # Return the functions.
+    return local_mt, local_st
 # _end_def_
