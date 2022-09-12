@@ -19,7 +19,7 @@ class SCG(object):
 
     __slots__ = ("f", "nit", "x_tol", "f_tol", "display", "stats")
 
-    def __init__(self, func, *args):
+    def __init__(self, func: callable, *args):
         """
         Default constructor the SCG class.
 
@@ -36,37 +36,21 @@ class SCG(object):
         self.f = func
 
         # Maximum number of iterations.
-        if "max_it" in p_list:
-            self.nit = p_list["max_it"]
-        else:
-            self.nit = 150
-        # _end_if_
+        self.nit = p_list["max_it"] if "max_it" in p_list else 200
 
         # Error tolerance in 'x'.
-        if "x_tol" in p_list:
-            self.x_tol = p_list["x_tol"]
-        else:
-            self.x_tol = 1.0e-6
-        # _end_if_
+        self.x_tol = p_list["x_tol"] if "x_tol" in p_list else 1.0e-6
 
         # Error tolerance in 'fx'.
-        if "f_tol" in p_list:
-            self.f_tol = p_list["f_tol"]
-        else:
-            self.f_tol = 1.0e-8
-        # _end_if_
+        self.f_tol = p_list["f_tol"] if "f_tol" in p_list else 1.0e-8
 
         # Display statistics flag.
-        if "display" in p_list:
-            self.display = p_list["display"]
-        else:
-            self.display = False
-        # _end_if_
+        self.display = p_list["display"] if "display" in p_list else False
 
         # Statistics dictionary.
-        self.stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit),
-                      "dfx": np.zeros(self.nit), "f_eval": 0.0,
-                      "df_eval": 0.0, "beta": np.zeros(self.nit)}
+        self.stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
+                      "dfx": np.zeros(self.nit, dtype=float), "f_eval": 0.0,
+                      "df_eval": 0.0, "beta": np.zeros(self.nit, dtype=float)}
     # _end_def_
 
     def __call__(self, x0, *args):
@@ -80,6 +64,15 @@ class SCG(object):
         :return: 1)  x: the point where the minimum was found,
                  2) fx: the function value (at the minimum point).
         """
+
+        # Check for verbosity.
+        if self.display:
+            print("SCG optimization started ...")
+        # _end_if_
+
+        # Localize 'f'.
+        func = self.f
+
         # Make a local copy of the function.
         _copy = np.copy
 
@@ -93,7 +86,7 @@ class SCG(object):
         sigma0 = 1.0e-3
 
         # Initial function/gradients value.
-        f_now, grad_new = self.f(x, *args)
+        f_now, grad_new = func(x, *args)
 
         # Increase function / gradient evaluations by one.
         self.stats["f_eval"] += 1
@@ -157,7 +150,7 @@ class SCG(object):
                 x_plus = x + (sigma * d)
 
                 # We evaluate the df(x_plus).
-                _, g_plus = self.f(x_plus)
+                _, g_plus = func(x_plus)
 
                 # Increase function/gradients evaluations by one.
                 self.stats["f_eval"] += 1
@@ -181,7 +174,7 @@ class SCG(object):
             x_new = x + (alpha * d)
 
             # Return only the fx (not the dfx).
-            f_new = self.f(x_new, False)
+            f_new = func(x_new, False)
 
             # Note that the gradient is computed anyway.
             self.stats["f_eval"] += 1
@@ -208,7 +201,7 @@ class SCG(object):
 
             # Used in debugging mode.
             if self.display and (np.mod(j, 50) == 0):
-                print(" {0}: fx={1:.3f}\tsum(gx)={2:.3f}".format(j, f_now, total_grad))
+                print(f" {j:>5}: fx={f_now:.3f} sum(gx)={total_grad:.3f}")
             # _end_if_
 
             # TBD:
@@ -229,7 +222,7 @@ class SCG(object):
                     f_old, grad_old = f_new, _copy(grad_new)
 
                     # Evaluate function/gradient at the new point.
-                    f_now, grad_new = self.f(x, *args)
+                    f_now, grad_new = func(x, *args)
 
                     # Increase function/gradients evaluations by one.
                     self.stats["f_eval"] += 1
@@ -272,7 +265,7 @@ class SCG(object):
         # _end_for_
 
         # Display a final (warning) to the user.
-        print(" SGC: Maximum number of iterations has been reached.")
+        print(f"SGC: Maximum number of iterations ({self.nit}) has been reached.")
 
         # Here we have reached the maximum number of iterations.
         fx = f_old
@@ -301,8 +294,9 @@ class SCG(object):
         :return: a string representation of a SCG object.
         """
 
-        return " SCG Id({0}): Function={1}, Max-It={2}," \
-               " x_tol={3}, f_tol={4}".format(id(self), self.f, self.nit, self.x_tol, self.f_tol)
+        return f"SCG Id({id(self)}): "\
+               f"Function={self.f}, Max-It={self.nit}, " \
+               f"x_tol={self.x_tol}, f_tol={self.f_tol}"
     # _end_def_
 
 # _end_class_
