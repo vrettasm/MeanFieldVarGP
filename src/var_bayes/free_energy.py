@@ -4,33 +4,22 @@ from numpy import array as array_t
 from scipy.integrate import quad_vec
 from scipy.optimize import minimize, check_grad
 from numerical.utilities import cholesky_inv, log_det
+from dynamical_systems.stochastic_process import StochasticProcess
 
 
 class FreeEnergy(object):
 
-    def __init__(self, tk: array_t, mu0: array_t, tau0: array_t,
-                 drift_func: callable, grad_mean: callable, grad_vars: callable,
-                 sde_theta: array_t, sde_sigma: array_t,
+    def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
                  h_operator: array_t = None):
         """
         Default constructor of the FreeEnergy class.
 
-        :param tk: (discrete) time-window of inference [t0, tf].
+        :param sde: StochasticProcess (SDE).
 
         :param mu0: (prior) mean value(s) at time t=0.
 
         :param tau0: (prior) variance value(s) at time t=0.
-
-        :param drift_func: (callable) function of the system.
-
-        :param grad_mean: (callable) function of the system gradients.
-
-        :param grad_vars: (callable) function of the system gradients.
-
-        :param sde_theta: SDE drift model parameters.
-
-        :param sde_sigma: SDE diffusion noise parameters.
 
         :param obs_times: (discrete) time-window of observation times.
 
@@ -42,15 +31,15 @@ class FreeEnergy(object):
         """
 
         # (WRAPPER FUNCTION): SDE energy function.
-        self.drift_fun_sde = drift_func
+        self.drift_fun_sde = sde.energy
 
         # (WRAPPER FUNCTION): Gradients of the
         # SDE with respect to the mean points.
-        self.grad_fun_mp = grad_mean
+        self.grad_fun_mp = sde.grad_mean
 
         # (WRAPPER FUNCTION): Gradients of the
         # SDE with respect to the variance points.
-        self.grad_fun_vp = grad_vars
+        self.grad_fun_vp = sde.grad_variance
 
         # Prior mean (t=0).
         self._mu0 = np.asarray(mu0, dtype=float)
@@ -60,11 +49,11 @@ class FreeEnergy(object):
 
         # Make sure the SDE drift and diffusion noise
         # parameters are entered correctly as arrays.
-        self.theta = np.asarray(sde_theta, dtype=float)
-        self.sigma = np.asarray(sde_sigma, dtype=float)
+        self.theta = sde.theta
+        self.sigma = sde.sigma
 
         # Discrete time-window: Tk=[t0, tf].
-        self.tk = np.asarray(tk, dtype=float)
+        self.tk = sde.time_window
 
         # Sanity check.
         if not np.all(np.diff(self.tk) > 0.0):
@@ -351,17 +340,17 @@ class FreeEnergy(object):
             # Scale the (partial) energy with the inverse noise.
             # Allow parallel integration by setting 'workers=N'.
             Esde += quad_vec(lambda t: self.drift_fun_sde(t, *params),
-                             ti, tj, workers=4)[0].dot(inv_sigma)
+                             ti, tj)[0].dot(inv_sigma)
 
             # Solve the integrals of dEsde(t)/dMp in [ti, tj].
             # Allow parallel integration by setting 'workers=N'.
             ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params),
-                                 ti, tj, workers=4)[0]
+                                 ti, tj)[0]
 
             # Solve the integrals of dEsde(t)/dSp in [ti, tj].
             # Allow parallel integration by setting 'workers=N'.
             ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
-                                 ti, tj, workers=4)[0]
+                                 ti, tj)[0]
 
             # Local accumulators. These will be used to sum the
             # gradients over all the system dimensions "dim_D".
@@ -415,6 +404,16 @@ class FreeEnergy(object):
         # Inverted Ri and Cholesky factor Qi.
         Ri, Qi = cholesky_inv(self.obs_noise)
 
+        # Sanity check.
+        if isinstance(Qi, float):
+            Qi = np.array(Qi)
+        # _end_if_
+
+        # Sanity check.
+        if isinstance(Ri, float):
+            Ri = np.atleast_2d(Ri)
+        # _end_if_
+
         # Auxiliary quantity (for the E_obs) no.1.
         Z = Qi.dot(self.obs_values - self.h_operator.dot(mean_pts))
 
@@ -435,6 +434,9 @@ class FreeEnergy(object):
         dEobs_dm = np.zeros((self.dim_D, self.num_M))
         dEobs_ds = np.zeros((self.dim_D, self.num_M))
 
+        # Remove singleton dimensions.
+        kappa_1 = np.squeeze(kappa_1)
+
         # Calculate partial energies from all 'M' observations.
         # NOTE: The gradients are given by:
         #   1. dEobs(k)/dm(k) := -H'*Ri*(yk-h(xk))
@@ -442,7 +444,7 @@ class FreeEnergy(object):
         for k in range(self.num_M):
 
             # Get the auxiliary value.
-            Zk = Z[k]
+            Zk = Z[:, k]
 
             # Compute the energy of the k-th observation.
             Eobs += Zk.T.dot(Zk) + W[k]
@@ -518,8 +520,8 @@ class FreeEnergy(object):
         Ecost = E0 + Esde + Eobs
 
         # Put all gradients together.
-        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtyp=float)
-        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtyp=float)
+        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
+        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
         # Localize reshape function (for speed up).
         reshape_ = np.reshape
@@ -597,12 +599,15 @@ class FreeEnergy(object):
         # Check numerically the gradients.
         if check_gradients:
 
+            # Display the action.
+            print("Grad-Check |BEFORE| minimization ... ")
+
             # Get the grad-check error.
             error_t0 = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
                                   _analytic_grad_func, x0.copy())
 
             # Display the error.
-            print(f"Grad-Check error |BEFORE| minimization = {error_t0:.3E}\n")
+            print(f" > Error = {error_t0:.3E}\n")
 
         # _end_if_
 
@@ -621,14 +626,20 @@ class FreeEnergy(object):
         # Check numerically the gradients.
         if check_gradients:
 
+            # Display the action.
+            print("Grad-Check |AFTER| minimization ... ")
+
             # Get the grad-check error.
             error_tf = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
                                   _analytic_grad_func, opt_res.x.copy())
 
             # Display the error.
-            print(f"Grad-Check error |AFTER| minimization = {error_tf:.3E}\n")
+            print(f" > Error = {error_tf:.3E}\n")
 
         # _end_if_
+
+        # Final message.
+        print("Done!")
 
         # Get the final (optimal) results.
         return opt_res
