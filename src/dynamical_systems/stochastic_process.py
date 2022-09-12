@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import array as array_t
 from numpy.random import default_rng
 
 
@@ -10,9 +11,12 @@ class StochasticProcess(object):
         1) the discrete sample path (xt)
         2) the discrete time window (tk)
         3) random number generator (rng)
+        4) drift (model) parameters
+        5) diffusion (noise) coefficient
     """
 
-    __slots__ = ("xt", "tk", "_rng", "Esde", "dEsde_dm", "dEsde_ds")
+    __slots__ = ("xt", "tk", "_rng", "_theta", "_sigma",
+                 "Esde", "dEsde_dm", "dEsde_ds")
 
     def __init__(self, r_seed: int = None):
         """
@@ -34,12 +38,91 @@ class StochasticProcess(object):
         # Time-window.
         self.tk = None
 
+        # Drift parameters.
+        self._theta = None
+
+        # Diffusion noise coefficient.
+        self._sigma = None
+
         # Initialize the energy and gradient lists.
         # These will hold the lambdafied functions
         # (for each dynamical system).
         self.Esde = []
         self.dEsde_dm = []
         self.dEsde_ds = []
+    # _end_def_
+
+    @property
+    def theta(self):
+        """
+        Accessor method (getter).
+
+        :return: the drift parameter(s).
+        """
+
+        # Sanity check.
+        if self._theta is None:
+            raise NotImplementedError(f" {self.__class__.__name__}:"
+                                      f" Drift theta parameter(s) is not set yet.")
+        # _end_if_
+
+        return np.atleast_1d(self._theta)
+    # _end_def_
+
+    @theta.setter
+    def theta(self, new_value: array_t):
+        """
+        Accessor method (setter).
+
+        :param new_value: for the drift parameter.
+
+        :return: None.
+        """
+        self._theta = np.asarray(new_value, dtype=float)
+    # _end_def_
+
+    @property
+    def sigma(self):
+        """
+        Accessor method (getter).
+
+        :return: the diffusion noise parameter.
+        """
+
+        # Sanity check.
+        if self._sigma is None:
+            raise NotImplementedError(f" {self.__class__.__name__}:"
+                                      f" Diffusion noise parameters have not set yet.")
+        # _end_if_
+
+        return np.atleast_1d(self._sigma)
+
+    # _end_def_
+
+    @sigma.setter
+    def sigma(self, new_value: array_t):
+        """
+        Accessor method (setter).
+
+        :param new_value: for the sigma diffusion.
+
+        :return: None.
+        """
+
+        # Make sure the input is array.
+        new_value = np.asarray(new_value, dtype=float)
+
+        # Check for positive definiteness.
+        if np.all(new_value > 0.0):
+
+            # Make the change.
+            self._sigma = new_value
+
+        else:
+            raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
+                               f" {new_value} is not positive definite.")
+        # _end_if_
+
     # _end_def_
 
     @property

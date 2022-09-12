@@ -96,7 +96,7 @@ class Lorenz96(StochasticProcess):
     https://en.wikipedia.org/wiki/Lorenz_96_model
     """
 
-    __slots__ = ("_sigma", "_theta", "_sigma_inverse", "dim_d")
+    __slots__ = ("dim_d",)
 
     def __init__(self, sigma: array_t, theta: array_t,
                  r_seed: int = None, dim_d: int = 40):
@@ -115,18 +115,15 @@ class Lorenz96(StochasticProcess):
         # Call the constructor of the parent class.
         super().__init__(r_seed=r_seed)
 
-        # Display class info.
-        print(f" Creating Lorenz-96 (D={dim_d}) process.")
-
-        # Make sure the inputs are numpy arrays.
-        sigma = np.asarray(sigma, dtype=float)
-        theta = np.asarray(theta, dtype=float)
-
         # Check the number of input dimensions.
         if dim_d < 4:
             raise ValueError(f" {self.__class__.__name__}:"
                              f" Insufficient state vector dimensions: {dim_d}")
         # _end_if_
+
+        # Make sure the inputs are numpy arrays.
+        sigma = np.asarray(sigma, dtype=float)
+        theta = np.asarray(theta, dtype=float)
 
         # Store the model dimensions.
         self.dim_d = dim_d
@@ -134,15 +131,15 @@ class Lorenz96(StochasticProcess):
         # Check the dimensions of the input.
         if sigma.ndim == 0:
             # Vector (from scalar).
-            self._sigma = sigma * np.ones(dim_d)
+            self.sigma = sigma * np.ones(dim_d)
 
         elif sigma.ndim == 1:
             # Copy the vector.
-            self._sigma = sigma
+            self.sigma = sigma
 
         elif sigma.ndim == 2:
             # From full Matrix keep only the diagonal.
-            self._sigma = sigma.diagonal()
+            self.sigma = sigma.diagonal()
 
         else:
             raise ValueError(f" {self.__class__.__name__}:"
@@ -150,87 +147,13 @@ class Lorenz96(StochasticProcess):
         # _end_if_
 
         # Check the dimensionality.
-        if len(self._sigma) != dim_d:
+        if len(self.sigma) != dim_d:
             raise ValueError(f" {self.__class__.__name__}:"
                              f" Wrong matrix dimensions: {self._sigma.shape}")
         # _end_if_
 
-        # Check for positive definiteness.
-        if np.all(self._sigma > 0.0):
-
-            # Invert Sigma matrix.
-            self._sigma_inverse = 1.0 / self._sigma
-        else:
-            raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Noise matrix {self._sigma} is not positive definite.")
-        # _end_if_
-
         # Store the drift parameter.
-        self._theta = theta
-    # _end_def_
-
-    @property
-    def theta(self):
-        """
-        Accessor method (getter).
-
-        :return: the drift parameter.
-        """
-        return self._theta
-    # _end_def_
-
-    @theta.setter
-    def theta(self, new_value: array_t):
-        """
-        Accessor method (setter).
-
-        :param new_value: for the drift parameter.
-
-        :return: None.
-        """
-        self._theta = new_value
-    # _end_def_
-
-    @property
-    def sigma(self):
-        """
-        Accessor method (getter).
-
-        :return: the system noise parameter.
-        """
-        return self._sigma
-    # _end_def_
-
-    @sigma.setter
-    def sigma(self, new_value: array_t):
-        """
-        Accessor method (setter).
-
-        :param new_value: for the sigma diffusion.
-
-        :return: None.
-        """
-
-        # Make sure the input is array.
-        new_value = np.asarray(new_value, dtype=float)
-
-        # Check the dimensionality.
-        if new_value.shape != (self.dim_d,):
-            raise ValueError(f" {self.__class__.__name__}:"
-                             f" Wrong vector dimensions: {new_value.shape}.")
-        # _end_if_
-
-        # Check for positive definiteness.
-        if np.all(new_value > 0.0):
-            # Make the change.
-            self._sigma = new_value
-
-            # Update the inverse matrix.
-            self._sigma_inverse = 1.0 / self._sigma
-        else:
-            raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
-                               f" {new_value} is not positive definite.")
-        # _end_if_
+        self.theta = theta
     # _end_def_
 
     @property
@@ -240,7 +163,7 @@ class Lorenz96(StochasticProcess):
 
         :return: the inverse of diffusion noise parameter.
         """
-        return self._sigma_inverse
+        return 1.0 / self.sigma
     # _end_def_
 
     def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
@@ -264,7 +187,7 @@ class Lorenz96(StochasticProcess):
         dim_t = tk.size
 
         # Default starting point.
-        x0 = self._theta * np.ones(self.dim_d)
+        x0 = self.theta * np.ones(self.dim_d)
 
         # Initial conditions time step.
         delta_t = 1.0E-3
@@ -274,7 +197,7 @@ class Lorenz96(StochasticProcess):
 
         # BURN IN:
         for t in range(5000):
-            x0 = x0 + _l96(x0, self._theta) * delta_t
+            x0 = x0 + _l96(x0, self.theta) * delta_t
         # _end_for_
 
         # Allocate array.
@@ -285,7 +208,7 @@ class Lorenz96(StochasticProcess):
 
         # Compute the sqrt of noise.
         # NOTE: the scaling with 'dt'.
-        ek = np.sqrt(self._sigma * dt)
+        ek = np.sqrt(self.sigma * dt)
 
         # Repeat the vector for the multiplication.
         ek = np.repeat(ek, dim_t).reshape(self.dim_d, dim_t)
@@ -295,7 +218,7 @@ class Lorenz96(StochasticProcess):
 
         # Create the path by solving the SDE iteratively.
         for t in range(1, dim_t):
-            x[t] = x[t - 1] + _l96(x[t - 1], self._theta) * dt + ek.T[t]
+            x[t] = x[t - 1] + _l96(x[t - 1], self.theta) * dt + ek.T[t]
         # _end_for_
 
         # Store the sample path (trajectory).

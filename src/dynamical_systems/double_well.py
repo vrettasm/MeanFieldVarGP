@@ -11,8 +11,6 @@ class DoubleWell(StochasticProcess):
     https://en.wikipedia.org/wiki/Double-well_potential
     """
 
-    __slots__ = ("_sigma", "_theta", "_sigma_inverse")
-
     def __init__(self, sigma: float, theta: float, r_seed: int = None):
         """
         Default constructor of the DoubleWell (DW) object.
@@ -27,104 +25,14 @@ class DoubleWell(StochasticProcess):
         # Call the constructor of the parent class.
         super().__init__(r_seed=r_seed)
 
-        # Check for the correct type.
-        if isinstance(sigma, float):
+        # Store the diffusion noise.
+        self.sigma = sigma
 
-            # Check for positivity.
-            if sigma > 0.0:
-
-                # Store the diffusion noise.
-                self._sigma = sigma
-            else:
-                raise ValueError(f" {self.__class__.__name__}:"
-                                 f" The diffusion noise value: {sigma},"
-                                 f" should be strictly positive.")
-            # _end_if_
-        else:
-            raise TypeError(f" {self.__class__.__name__}:"
-                            f" The diffusion noise value: {sigma},"
-                            f" should be floating point number.")
-        # _end_if_
-
-        # Inverse of sigma noise coefficient.
-        self._sigma_inverse = 1.0 / sigma
-
-        # Check for the correct type.
-        if isinstance(theta, float):
-
-            # Store the drift parameter.
-            self._theta = theta
-        else:
-            raise TypeError(f" {self.__class__.__name__}:"
-                            f" The drift model parameter: {theta},"
-                            f" should be floating point number.")
-        # _end_if_
+        # Store the drift parameter.
+        self.theta = theta
 
         # Load the energy functions.
         self._load_functions()
-    # _end_def_
-
-    @property
-    def theta(self):
-        """
-        Accessor method (getter).
-
-        :return: the drift parameter.
-        """
-        return np.atleast_1d(self._theta)
-    # _end_def_
-
-    @theta.setter
-    def theta(self, new_value: float):
-        """
-        Accessor method (setter).
-
-        :param new_value: for the drift parameter.
-
-        :return: None.
-        """
-
-        # Store the drift parameter.
-        self._theta = float(new_value)
-    # _end_def_
-
-    @property
-    def sigma(self):
-        """
-        Accessor method (getter).
-
-        :return: the diffusion noise parameter.
-        """
-        return np.atleast_1d(self._sigma)
-    # _end_def_
-
-    @sigma.setter
-    def sigma(self, new_value: float):
-        """
-        Accessor method (setter).
-
-        :param new_value: for the sigma diffusion.
-
-        :return: None.
-        """
-
-        # Make sure the new_value is float.
-        new_value = float(new_value)
-
-        # Accept only positive values.
-        if new_value > 0.0:
-
-            # Make the change.
-            self._sigma = new_value
-
-            # Update the inverse value.
-            self._sigma_inverse = 1.0 / self._sigma
-        else:
-            # Raise an error with a message.
-            raise ValueError(f" {self.__class__.__name__}: The sigma value"
-                             f" {new_value}, should be strictly positive. ")
-        # _end_if_
-
     # _end_def_
 
     @property
@@ -134,7 +42,7 @@ class DoubleWell(StochasticProcess):
 
         :return: the inverse of diffusion noise parameter.
         """
-        return np.atleast_1d(self._sigma_inverse)
+        return 1.0 / self.sigma
     # _end_def_
 
     def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):

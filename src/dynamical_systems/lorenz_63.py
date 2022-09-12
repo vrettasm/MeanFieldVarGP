@@ -42,8 +42,6 @@ class Lorenz63(StochasticProcess):
     https://en.wikipedia.org/wiki/Lorenz_system
     """
 
-    __slots__ = ("_sigma", "_theta", "_sigma_inverse")
-
     def __init__(self, sigma: array_t, theta: array_t, r_seed: int = None):
         """
         Default constructor of the L63 object.
@@ -59,9 +57,6 @@ class Lorenz63(StochasticProcess):
         # Call the constructor of the parent class.
         super().__init__(r_seed=r_seed)
 
-        # Display class info.
-        print(" Creating Lorenz-63 process.")
-
         # Make sure the inputs are numpy arrays.
         sigma = np.asarray(sigma, dtype=float)
         theta = np.asarray(theta, dtype=float)
@@ -69,15 +64,15 @@ class Lorenz63(StochasticProcess):
         # Check the dimensions of the input.
         if sigma.ndim == 0:
             # Vector (from scalar).
-            self._sigma = sigma * np.ones(3)
+            self.sigma = sigma * np.ones(3)
 
         elif sigma.ndim == 1:
             # Copy the vector.
-            self._sigma = sigma
+            self.sigma = sigma
 
         elif sigma.ndim == 2:
             # From full Matrix keep only the diagonal.
-            self._sigma = sigma.diagonal()
+            self.sigma = sigma.diagonal()
 
         else:
             raise ValueError(f" {self.__class__.__name__}:"
@@ -85,100 +80,23 @@ class Lorenz63(StochasticProcess):
         # _end_if_
 
         # Check for the correct matrix dimensions.
-        if len(self._sigma) != 3:
+        if len(self.sigma) != 3:
             raise ValueError(f" {self.__class__.__name__}:"
                              f" Wrong vector dimensions: {self._sigma.shape}")
-        # _end_if_
-
-        # Check for positive definiteness.
-        if np.all(self._sigma > 0.0):
-
-            # Invert the sigma coefficients.
-            self._sigma_inverse = 1.0 / self._sigma
-        else:
-            raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
-                               f" {self._sigma} is not positive definite.")
         # _end_if_
 
         # Check the size of the drift vector.
         if theta.size == 3:
 
             # Store the drift vector.
-            self._theta = theta
+            self.theta = theta
         else:
             raise RuntimeError(f" {self.__class__.__name__}: Drift vector"
-                               f" {self._theta} is not [3 x 1].")
+                               f" {self.theta} is not [3 x 1].")
         # _end_if_
 
         # Load the energy functions.
         self._load_functions()
-
-    # _end_def_
-
-    @property
-    def theta(self):
-        """
-        Accessor method (getter).
-
-        :return: the drift parameter.
-        """
-        return np.atleast_1d(self._theta)
-
-    # _end_def_
-
-    @theta.setter
-    def theta(self, new_value: array_t):
-        """
-        Accessor method (setter).
-
-        :param new_value: for the drift parameter.
-
-        :return: None.
-        """
-        self._theta = np.asarray(new_value, dtype=float)
-    # _end_def_
-
-    @property
-    def sigma(self):
-        """
-        Accessor method (getter).
-
-        :return: the system noise parameter.
-        """
-        return np.atleast_1d(self._sigma)
-
-    # _end_def_
-
-    @sigma.setter
-    def sigma(self, new_value: array_t):
-        """
-        Accessor method (setter).
-
-        :param new_value: for the sigma diffusion.
-
-        :return: None.
-        """
-
-        # Make sure the input is array.
-        new_value = np.asarray(new_value, dtype=float)
-
-        # Check the dimensionality.
-        if new_value.shape != (3,):
-            raise ValueError(f" {self.__class__.__name__}:"
-                             f" Wrong vector dimensions: {new_value.shape}.")
-        # _end_if_
-
-        # Check for positive definiteness.
-        if np.all(new_value > 0.0):
-            # Make the change.
-            self._sigma = new_value
-
-            # Update the inverse matrix elements.
-            self._sigma_inverse = 1.0 / self._sigma
-        else:
-            raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
-                               f" {new_value} is not positive definite.")
-        # _end_if_
 
     # _end_def_
 
@@ -189,7 +107,7 @@ class Lorenz63(StochasticProcess):
 
         :return: the inverse of diffusion noise vector.
         """
-        return np.atleast_1d(self._sigma_inverse)
+        return 1.0 / self.sigma
 
     # _end_def_
 
