@@ -480,6 +480,8 @@ class FreeEnergy(object):
 
          --> minimize(E_cost, x0, method="BFGS", jac=True)
 
+        other alternatives are: CG, Newton-CG, L-BFGS-B, etc.
+
         :param x: the optimization variables. Here we take the mean
         and variance points of the Lagrange polynomials.
 
@@ -527,10 +529,25 @@ class FreeEnergy(object):
         # Localize reshape function (for speed up).
         reshape_ = np.reshape
 
-        # We need to reshape the gradients of Esde.
-        for n in range(self.obs_times.size - 1):
-            Ecost_dm[:, (3 * n): (3 * n) + 4] = reshape_(dEsde_dm[n], (self.dim_D, 4))
-            Ecost_ds[:, (2 * n): (2 * n) + 3] = reshape_(dEsde_ds[n], (self.dim_D, 3))
+        # Copy the gradients of the first interval.
+        Ecost_dm[:, 0:4] = reshape_(dEsde_dm[0], (self.dim_D, 4))
+        Ecost_ds[:, 0:3] = reshape_(dEsde_ds[0], (self.dim_D, 3))
+
+        # Iterate over the rest (L-1) intervals.
+        for n in range(1, self.obs_times.size - 1):
+
+            # Reshape the n-th gradients.
+            temp_dm = reshape_(dEsde_dm[n], (self.dim_D, 4))
+            temp_ds = reshape_(dEsde_ds[n], (self.dim_D, 3))
+
+            # Add the link between intervals (at observation times).
+            Ecost_dm[:, (3 * n)] += temp_dm[:, 0]
+            Ecost_ds[:, (2 * n)] += temp_ds[:, 0]
+
+            # Copy the rest of the gradients.
+            Ecost_dm[:, (3 * n+1): (3 * n) + 4] = temp_dm[:, 1:]
+            Ecost_ds[:, (2 * n+1): (2 * n) + 3] = temp_ds[:, 1:]
+
         # _end_for_
 
         # Add the initial contribution from KL0.
@@ -538,8 +555,8 @@ class FreeEnergy(object):
         Ecost_ds[:, 0] += dE0_ds0
 
         # Add the gradients (at observation times).
-        Ecost_dm[:, self.ikm] += 0.5 * dEobs_dm
-        Ecost_ds[:, self.iks] += 0.5 * dEobs_ds
+        Ecost_dm[:, self.ikm] += dEobs_dm
+        Ecost_ds[:, self.iks] += dEobs_ds
 
         # Rescale the variance gradients to account for
         # the log-transformation (to ensure positivity).
@@ -561,7 +578,7 @@ class FreeEnergy(object):
                                       Ecost_ds.flatten(order='C')), axis=0)
     # _end_def_
 
-    def find_minimum(self, x0, check_gradients=False):
+    def find_minimum(self, x0, check_gradients=False, verbose=False):
         """
         Optimizes the free energy value (E_cost) by using
         the "optimize.minimize()" function. The result is
@@ -574,6 +591,9 @@ class FreeEnergy(object):
         :param check_gradients: boolean flag to determine
         the checking of the gradients, before and after
         the minimization.
+
+        :param verbose: boolean flag to display information
+        about the convergence of the process.
 
         :return: the optimal solution found by minimize().
         """
@@ -616,8 +636,8 @@ class FreeEnergy(object):
         time_t0 = time.perf_counter()
 
         # Run the optimization procedure.
-        opt_res = minimize(self.E_cost, x0, method='BFGS', jac=True)
-
+        opt_res = minimize(self.E_cost, x0, method="CG", jac=True,
+                           tol=1.0E-4, options={"disp": verbose, "maxiter": 1000})
         # Stop the timer.
         time_tf = time.perf_counter()
 
