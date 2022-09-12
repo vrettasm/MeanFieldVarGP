@@ -302,7 +302,7 @@ class StochasticProcess(object):
             obs_y = obs_y[:, h_mask]
         # _end_if_
 
-        # Observation (times / values).
+        # Observation (times indexes / values).
         return obs_t, obs_y
     # _end_def_
 
