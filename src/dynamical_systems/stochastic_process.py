@@ -13,6 +13,10 @@ class StochasticProcess(object):
         3) random number generator (rng)
         4) drift (model) parameters
         5) diffusion (noise) coefficient
+
+    It also holds additional information that is common among the systems.
+    This is the energy functions (along with the gradients with respect to
+    the optimized parameters).
     """
 
     __slots__ = ("xt", "tk", "_rng", "_theta", "_sigma",
