@@ -1,5 +1,5 @@
 import numpy as np
-from src.numerics.utilities import finite_diff
+
 
 class SCG(object):
     """
@@ -7,36 +7,33 @@ class SCG(object):
     object. Attempts to find a local minimum of the function f(x).
     Here 'x0' is a column vector and 'f' must returns a scalar value.
 
-    The minimisation process uses also the gradient 'df' (i.e. df(x)/dx).
+    The minimisation process uses also the gradient df(x)/dx. To speed
+    up the process, the input function is passing this gradient, along
+    with the function value.
+
     The point at which 'f' has a local minimum is returned as 'x'. The
     function value at that point (the minimum) is returned in "fx".
 
-    NOTE: This code is adopted from NETLAB (a free MATLAB library).
-
-    Reference Book:
-    Ian T. Nabney (2001). "Netlab: Algorithms for Pattern Recognition."
-    Advances in Pattern Recognition, Springer.
+    Additional information is passed to the 'stats' dictionary.
     """
 
-    __slots__ = ("f", "df", "nit", "x_tol", "f_tol", "display", "stats")
+    __slots__ = ("f", "nit", "x_tol", "f_tol", "display", "stats")
 
-    def __init__(self, f, df, *args):
+    def __init__(self, func, *args):
         """
         Default constructor the SCG class.
 
-        :param f: is the objective function to be optimised.
+        :param func: is the objective function to be optimised.
 
-        :param df: is the derivative of the objective function w.r.t. 'x'.
-
-        :param args: is a dictionary containing all additional parameters
-                     for both 'f' and 'df' functions.
+        :param args: is a dictionary containing all additional
+        parameters for 'func'.
         """
 
         # Check if we have given parameters.
         p_list = args[0] if args else {}
 
-        # Function handles.
-        self.f, self.df = f, df
+        # Function handle.
+        self.f = func
 
         # Maximum number of iterations.
         if "max_it" in p_list:
@@ -96,8 +93,7 @@ class SCG(object):
         sigma0 = 1.0e-3
 
         # Initial function/gradients value.
-        f_now = self.f(x, *args)
-        grad_new = self.df(x, *args)
+        f_now, grad_new = self.f(x, *args)
 
         # Increase function / gradient evaluations by one.
         self.stats["f_eval"] += 1
@@ -161,10 +157,7 @@ class SCG(object):
                 x_plus = x + (sigma * d)
 
                 # We evaluate the df(x_plus).
-                # Because we evaluate the gradient at a new point
-                # we run the f(x) too,  so that we get consistent
-                # variational and Lagrangian parameters.
-                g_plus = self.df(x_plus, eval_fun=True)
+                _, g_plus = self.f(x_plus)
 
                 # Increase function/gradients evaluations by one.
                 self.stats["f_eval"] += 1
@@ -186,8 +179,13 @@ class SCG(object):
 
             # Evaluate the function at a new point.
             x_new = x + (alpha * d)
-            f_new = self.f(x_new, *args)
+
+            # Return only the fx (not the dfx).
+            f_new = self.f(x_new, False)
+
+            # Note that the gradient is computed anyway.
             self.stats["f_eval"] += 1
+            self.stats["df_eval"] += 1
 
             # Calculate the new comparison ratio.
             Delta = 2.0 * (f_new - f_old) / (alpha * mu)
@@ -209,7 +207,7 @@ class SCG(object):
             self.stats["dfx"][j] = total_grad
 
             # Used in debugging mode.
-            if self.display and (np.mod(j, 10) == 0):
+            if self.display and (np.mod(j, 50) == 0):
                 print(" {0}: fx={1:.3f}\tsum(gx)={2:.3f}".format(j, f_now, total_grad))
             # _end_if_
 
@@ -231,8 +229,7 @@ class SCG(object):
                     f_old, grad_old = f_new, _copy(grad_new)
 
                     # Evaluate function/gradient at the new point.
-                    f_now = self.f(x, *args)
-                    grad_new = self.df(x, *args)
+                    f_now, grad_new = self.f(x, *args)
 
                     # Increase function/gradients evaluations by one.
                     self.stats["f_eval"] += 1
@@ -294,54 +291,6 @@ class SCG(object):
         return self.stats
     # _end_def_
 
-    def check_gradient_function(self, x, tol=1.0e-4):
-        """
-        Tests whether the gradient function is accurate,
-        compared to the numerical differentiation value.
-
-        :param x: State vector to test the gradient.
-
-        :param tol: tolerance value.
-
-        :return: None.
-        """
-
-        # Display info.
-        print(" GRAD_CHECK_STARTED: ")
-
-        # Analytical gradient calculation.
-        print(" > Calculating gradient(s) analytically ...", end="")
-        grad_A = self.df(x.copy(), eval_fun=True)
-        print(" done.")
-
-        # Numerical gradient calculation.
-        print(" > Calculating gradient(s) numerically  ...", end="")
-        grad_N = finite_diff(self.f, x.copy())
-        print(" done.")
-
-        # Get their norms (L2).
-        norm_A = np.linalg.norm(grad_A)
-        norm_N = np.linalg.norm(grad_N)
-
-        # Norm(A-N)
-        norm_diff = np.linalg.norm(grad_A - grad_N)
-
-        # Get their relative difference.
-        rel_diff = norm_diff / (norm_A + norm_N)
-
-        # Display info.
-        print(" > Relative difference is: {0:.4}.".format(rel_diff))
-
-        # Get the outcome.
-        outcome = "PASSED" if (norm_diff/x.size <= tol) else "FAILED"
-
-        # Display info.
-        print(" > Gradient test {0}.".format(outcome))
-
-        # Display info.
-        print(" GRAD_CHECK_FINISHED:\n")
-    # _end_def_
-
     # Auxiliary.
     def __str__(self):
         """
@@ -352,10 +301,8 @@ class SCG(object):
         :return: a string representation of a SCG object.
         """
 
-        return " SCG Id({0}):" \
-               " Function={1}, Gradient={2}, Max-It={3}," \
-               " x_tol={4}, f_tol={5}".format(id(self), self.f, self.df,
-                                              self.nit, self.x_tol, self.f_tol)
+        return " SCG Id({0}): Function={1}, Max-It={2}," \
+               " x_tol={3}, f_tol={4}".format(id(self), self.f, self.nit, self.x_tol, self.f_tol)
     # _end_def_
 
 # _end_class_
