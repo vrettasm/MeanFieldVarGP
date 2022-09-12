@@ -244,8 +244,7 @@ class FreeEnergy(object):
         # Energy of the initial moment.
         # NOTE: This formula works only because the matrices 'tau0'
         # and 's0' are diagonal, and we work with vectors.
-        E0 = 0.5 * (np.sum(np.log(self._tau0 / s0)) +
-                    np.sum((z0**2 + s0 - self._tau0) / self._tau0))
+        E0 = log_det(self._tau0/s0) + np.sum((z0**2 + s0 - self._tau0) / self._tau0)
 
         # Sanity check.
         if not np.isfinite(E0):
@@ -263,7 +262,7 @@ class FreeEnergy(object):
 
         # Kullback-Liebler and its derivatives at
         # time t=0, (i.e. dKL0/dm(0), dKL0/ds(0))
-        return E0, dE0_dm0, dE0_ds0
+        return 0.5 * E0, dE0_dm0, dE0_ds0
 
     # _end_def_
 
@@ -414,15 +413,17 @@ class FreeEnergy(object):
             Ri = np.atleast_2d(Ri)
         # _end_if_
 
-        # Auxiliary quantity (for the E_obs) no.1.
-        Z = Qi.dot(self.obs_values - self.h_operator.dot(mean_pts))
+        # Auxiliary quantity: (Y - H*m).
+        Y_minus_Hm = self.obs_values - self.h_operator.dot(mean_pts)
 
-        # Auxiliary quantity (for the E_obs) no.2.
+        # Auxiliary quantity (for the E_obs).
+        Z = Qi.dot(Y_minus_Hm)
+
+        # Auxiliary quantity (for the E_obs).
         W = Ri.diagonal().T.dot(self.h_operator.dot(vars_pts))
 
         # These are the derivatives of E_{obs} w.r.t. the mean/var points.
-        kappa_1 = -self.h_operator.dot(Ri).dot(self.obs_values -
-                                               self.h_operator.dot(mean_pts))
+        kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm)
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
         kappa_2 = 0.5 * np.diag(self.h_operator.T.dot(Ri).dot(self.h_operator))
@@ -431,8 +432,8 @@ class FreeEnergy(object):
         Eobs = 0.0
 
         # Initialize gradients arrays.
-        dEobs_dm = np.zeros((self.dim_D, self.num_M))
-        dEobs_ds = np.zeros((self.dim_D, self.num_M))
+        dEobs_dm = np.zeros((self.dim_D, self.num_M), dtype=float)
+        dEobs_ds = np.zeros((self.dim_D, self.num_M), dtype=float)
 
         # Remove singleton dimensions.
         kappa_1 = np.squeeze(kappa_1)
@@ -537,8 +538,8 @@ class FreeEnergy(object):
         Ecost_ds[:, 0] += dE0_ds0
 
         # Add the gradients (at observation times).
-        Ecost_dm[:, self.ikm] += dEobs_dm
-        Ecost_ds[:, self.iks] += dEobs_ds
+        Ecost_dm[:, self.ikm] += 0.5 * dEobs_dm
+        Ecost_ds[:, self.iks] += 0.5 * dEobs_ds
 
         # Rescale the variance gradients to account for
         # the log-transformation (to ensure positivity).
@@ -603,7 +604,7 @@ class FreeEnergy(object):
             print("Grad-Check |BEFORE| minimization ... ")
 
             # Get the grad-check error.
-            error_t0 = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
+            error_t0 = check_grad(lambda x_in: self.E_cost(x_in, output_gradients=False),
                                   _analytic_grad_func, x0.copy())
 
             # Display the error.
@@ -621,7 +622,7 @@ class FreeEnergy(object):
         time_tf = time.perf_counter()
 
         # Print final duration in seconds.
-        print(f" Elapsed time: {(time_tf - time_t0):.2f} seconds.")
+        print(f" Elapsed time: {(time_tf - time_t0):.2f} seconds.\n")
 
         # Check numerically the gradients.
         if check_gradients:
@@ -630,7 +631,7 @@ class FreeEnergy(object):
             print("Grad-Check |AFTER| minimization ... ")
 
             # Get the grad-check error.
-            error_tf = check_grad(lambda xin: self.E_cost(xin, output_gradients=False),
+            error_tf = check_grad(lambda x_in: self.E_cost(x_in, output_gradients=False),
                                   _analytic_grad_func, opt_res.x.copy())
 
             # Display the error.
