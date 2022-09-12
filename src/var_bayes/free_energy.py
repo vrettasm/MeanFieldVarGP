@@ -2,7 +2,9 @@ import time
 import numpy as np
 from numpy import array as array_t
 from scipy.integrate import quad_vec
-from scipy.optimize import minimize, check_grad
+from scipy.optimize import check_grad
+
+from numerical.optim_scg import SCG
 from numerical.utilities import cholesky_inv, log_det
 from dynamical_systems.stochastic_process import StochasticProcess
 
@@ -337,17 +339,14 @@ class FreeEnergy(object):
             # additional input parameters except the time "t".
             #
             # Scale the (partial) energy with the inverse noise.
-            # Allow parallel integration by setting 'workers=N'.
             Esde += quad_vec(lambda t: self.drift_fun_sde(t, *params),
                              ti, tj)[0].dot(inv_sigma)
 
             # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-            # Allow parallel integration by setting 'workers=N'.
             ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params),
                                  ti, tj)[0]
 
             # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-            # Allow parallel integration by setting 'workers=N'.
             ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
                                  ti, tj)[0]
 
@@ -580,20 +579,17 @@ class FreeEnergy(object):
 
     def find_minimum(self, x0, check_gradients=False, verbose=False):
         """
-        Optimizes the free energy value (E_cost) by using
-        the "optimize.minimize()" function. The result is
-        the final set of optimization variables (mean and
-        variance Lagrange polynomials).
+        Optimizes the free energy value (E_cost) by using the Scaled
+        Conjugate Gradient (SGC) optimizer. The result is the final
+        set of optimization variables.
 
-        :param x0: initial set of variables to start the
-        minimization.
+        :param x0: initial set of variables to start the minimization.
 
-        :param check_gradients: boolean flag to determine
-        the checking of the gradients, before and after
-        the minimization.
+        :param check_gradients: boolean flag to determine the checking
+        of the gradients, before and after the minimization.
 
-        :param verbose: boolean flag to display information
-        about the convergence of the process.
+        :param verbose: boolean flag to display information about the
+        convergence of the process.
 
         :return: the optimal solution found by minimize().
         """
@@ -632,12 +628,18 @@ class FreeEnergy(object):
 
         # _end_if_
 
+        # Setup SCG options.
+        options = {"max_it": 500, "x_tol": 1.0e-5, "f_tol": 1.0e-6, "display": verbose}
+
+        # Create an SCG optimizer.
+        scg_minimize = SCG(self.E_cost, options)
+
         # Start the timer.
         time_t0 = time.perf_counter()
 
         # Run the optimization procedure.
-        opt_res = minimize(self.E_cost, x0, method="CG", jac=True,
-                           tol=1.0E-4, options={"disp": verbose, "maxiter": 1000})
+        opt_x, opt_fx = scg_minimize(x0)
+
         # Stop the timer.
         time_tf = time.perf_counter()
 
@@ -652,7 +654,7 @@ class FreeEnergy(object):
 
             # Get the grad-check error.
             error_tf = check_grad(lambda x_in: self.E_cost(x_in, output_gradients=False),
-                                  _analytic_grad_func, opt_res.x.copy())
+                                  _analytic_grad_func, opt_x.copy())
 
             # Display the error.
             print(f" > Error = {error_tf:.3E}\n")
@@ -663,7 +665,7 @@ class FreeEnergy(object):
         print("Done!")
 
         # Get the final (optimal) results.
-        return opt_res
+        return opt_x, opt_fx
 
     # _end_def_
 
