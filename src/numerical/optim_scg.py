@@ -201,7 +201,7 @@ class SCG(object):
 
             # Used in debugging mode.
             if self.display and (np.mod(j, 50) == 0):
-                print(f" {j:>5}: fx={f_now:.3f} sum(gx)={total_grad:.3f}")
+                print(f" {j:>5}: fx={f_now:.3E} -- sum(gx)={total_grad:.3E}")
             # _end_if_
 
             # TBD:
