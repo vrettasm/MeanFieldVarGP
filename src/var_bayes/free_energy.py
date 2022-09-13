@@ -624,12 +624,13 @@ class FreeEnergy(object):
                                   _analytic_grad_func, x0.copy())
 
             # Display the error.
-            print(f" > Error = {error_t0:.3E}\n")
-
+            print(f" > Error = {error_t0:.3E}")
+            print("-------------------------------------\n")
         # _end_if_
 
         # Setup SCG options.
-        options = {"max_it": 500, "x_tol": 1.0e-5, "f_tol": 1.0e-6, "display": verbose}
+        options = {"max_it": 500, "display": verbose,
+                   "x_tol": 1.0e-5, "f_tol": 1.0e-6}
 
         # Create an SCG optimizer.
         scg_minimize = SCG(self.E_cost, options)
@@ -657,7 +658,8 @@ class FreeEnergy(object):
                                   _analytic_grad_func, opt_x.copy())
 
             # Display the error.
-            print(f" > Error = {error_tf:.3E}\n")
+            print(f" > Error = {error_tf:.3E}")
+            print("-------------------------------------\n")
 
         # _end_if_
 
