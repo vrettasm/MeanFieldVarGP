@@ -262,5 +262,3 @@ def unscented_approximation(fun, x_bar, x_cov, *args):
     # New (mean / covariance).
     return y_bar, y_cov
 # _end_def_
-
-# _end_def_
