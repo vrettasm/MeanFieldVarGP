@@ -92,13 +92,14 @@ class DoubleWell(StochasticProcess):
         # Store the sample path (trajectory).
         self.sample_path = x
 
-        # Store the time window (inference).
+        # Store the time window of inference.
         self.time_window = tk
     # _end_def_
 
     def _load_functions(self):
         """
-        Auxiliary method that load the symbolic equations for the DW system.
+        Auxiliary method that loads the symbolic (lambdafied)
+        energy and gradient equations for the DoubleWell SDE.
         """
 
         # Make sure to clear everything BEFORE we load the functions.
@@ -148,7 +149,7 @@ class DoubleWell(StochasticProcess):
         # Sanity check.
         if eqn_counter != 3:
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Some symbolic equations failed to load [{eqn_counter}].")
+                               f" Some symbolic equations failed to load [{eqn_counter}/3].")
         # _end_if_
 
     # _end_def_
