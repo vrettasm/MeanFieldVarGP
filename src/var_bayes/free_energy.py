@@ -552,7 +552,7 @@ class FreeEnergy(object):
 
         # _end_for_
 
-        # Add the initial contribution from KL0.
+        # Add the initial contribution from E0.
         Ecost_dm[:, 0] += dE0_dm0
         Ecost_ds[:, 0] += dE0_ds0
 
@@ -561,8 +561,8 @@ class FreeEnergy(object):
         Ecost_ds[:, self.iks] += dEobs_ds
 
         # Rescale the variance gradients to account for
-        # the log-transformation (to ensure positivity).
-        # NOTE: This is element-wise multiplication.
+        # the log-transformation and ensure positivity.
+        # NOTE: This is element-wise multiplication !!!
         Ecost_ds *= vars_points
 
         # Check if we want the gradients to be returned.
@@ -581,7 +581,7 @@ class FreeEnergy(object):
     # _end_def_
 
     def find_minimum(self, x0, maxiter: int = 100, x_tol: float = 1.0e-5,
-                     check_gradients=False, verbose=False):
+                     f_tol: float = 1.0e-5, check_gradients=False, verbose=False):
         """
         Optimizes the free energy value (E_cost) by using the Scaled
         Conjugate Gradient (SGC) optimizer. The result is the final
@@ -593,6 +593,9 @@ class FreeEnergy(object):
 
         :param x_tol: float number of tolerance between two successive
         solutions x_{k} and x_{k+1}.
+
+        :param f_tol: float number of tolerance between two successive
+        function evaluations f(x_{k}) and f(x_{k+1}).
 
         :param check_gradients: boolean flag to determine the checking
         of the gradients, before and after the minimization.
@@ -641,9 +644,10 @@ class FreeEnergy(object):
         # Put lower limits to them to avoid invalid entries.
         maxiter = np.maximum(int(maxiter), 100)
         x_tol = np.maximum(float(x_tol), 0.001)
+        f_tol = np.maximum(float(f_tol), 0.001)
 
         # Setup SCG options.
-        options = {"max_it": maxiter, "x_tol": x_tol, "f_tol": 1.0E-5,
+        options = {"max_it": maxiter, "x_tol": x_tol, "f_tol": f_tol,
                    "display": verbose}
 
         # Create an SCG optimizer.
