@@ -29,8 +29,16 @@ class SCG(object):
         # Check if we have given parameters.
         p_list = args[0] if args else {}
 
-        # Function handle.
-        self.f = func
+        # The function must be callable object.
+        if callable(func):
+
+            # Copy the function.
+            self.f = func
+
+        else:
+            raise TypeError(f"{self.__class__.__name__}: "
+                            f"Function {func} must be callable.")
+        # _end_if_
 
         # Maximum number of iterations.
         self.nit = p_list["max_it"] if "max_it" in p_list else 500
@@ -47,6 +55,50 @@ class SCG(object):
         # Statistics dictionary.
         self.stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
                       "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0}
+    # _end_def_
+
+    @property
+    def maxit(self):
+        """
+        Maximum number of iterations.
+
+        :return: the 'nit' parameter.
+        """
+        return self.nit
+
+    # _end_def_
+
+    @property
+    def xtol(self):
+        """
+        Tolerance in 'x'.
+
+        :return: the 'x_tol' parameter.
+        """
+        return self.x_tol
+
+    # _end_def_
+
+    @property
+    def ftol(self):
+        """
+        Tolerance in 'f(x)'.
+
+        :return: the 'f_tol' parameter.
+        """
+        return self.f_tol
+
+    # _end_def_
+
+    @property
+    def statistics(self):
+        """
+        Accessor method.
+
+        :return: the statistics dictionary.
+        """
+        return self.stats
+
     # _end_def_
 
     def __call__(self, x0, *args):
@@ -280,17 +332,6 @@ class SCG(object):
         return x, fx
     # _end_def_
 
-    @property
-    def statistics(self):
-        """
-        Accessor method.
-
-        :return: the statistics dictionary.
-        """
-        return self.stats
-    # _end_def_
-
-    # Auxiliary.
     def __str__(self):
         """
         Override to print a readable string presentation
