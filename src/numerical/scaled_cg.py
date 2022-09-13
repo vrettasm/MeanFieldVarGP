@@ -36,7 +36,7 @@ class SCG(object):
         self.f = func
 
         # Maximum number of iterations.
-        self.nit = p_list["max_it"] if "max_it" in p_list else 200
+        self.nit = p_list["max_it"] if "max_it" in p_list else 500
 
         # Error tolerance in 'x'.
         self.x_tol = p_list["x_tol"] if "x_tol" in p_list else 1.0e-6
@@ -73,8 +73,8 @@ class SCG(object):
         # Localize 'f'.
         func = self.f
 
-        # Make a local copy of the function.
-        _copy = np.copy
+        # Localize copy/copy_to functions.
+        _copy, _copy_to = np.copy, np.copyto
 
         # Make sure input is flat.
         x = x0.flatten()
@@ -88,12 +88,16 @@ class SCG(object):
         # Initial function/gradients value.
         f_now, grad_new = func(x, *args)
 
+        # Initialize old gradient vector.
+        grad_old = np.zeros_like(grad_new)
+
         # Increase function / gradient evaluations by one.
         self.stats["f_eval"] += 1
         self.stats["df_eval"] += 1
 
         # Store the current values (fx / dfx).
-        f_old, grad_old = f_now, _copy(grad_new)
+        f_old = f_now
+        _copy_to(grad_old, grad_new)
 
         # Set the initial search direction.
         d = -grad_new
@@ -183,9 +187,16 @@ class SCG(object):
             # Calculate the new comparison ratio.
             Delta = 2.0 * (f_new - f_old) / (alpha * mu)
             if Delta >= 0.0:
+                # Update counters.
                 success = 1
                 count_success += 1
-                x, f_now, g_now = _copy(x_new), _copy(f_new), _copy(grad_new)
+
+                # Copy the new values.
+                f_now = f_new
+                g_now = _copy(grad_new)
+
+                # Update the new search position.
+                _copy_to(x, x_new)
             else:
                 success = 0
                 f_now, g_now = f_old, _copy(grad_old)
@@ -201,7 +212,7 @@ class SCG(object):
 
             # Used in debugging mode.
             if self.display and (np.mod(j, 50) == 0):
-                print(f" {j:>5}: fx={f_now:.3E} -- sum(gx)={total_grad:.3E}")
+                print(f"It= {j:>5}: F(x)= {f_now:.3E} -/- Sum(Gradients)= {total_grad:.3E}")
             # _end_if_
 
             # TBD:
@@ -219,7 +230,8 @@ class SCG(object):
                     return x, fx
                 else:
                     # Update variables for the new position.
-                    f_old, grad_old = f_new, _copy(grad_new)
+                    f_old = f_new
+                    _copy_to(grad_old, grad_new)
 
                     # Evaluate function/gradient at the new point.
                     f_now, grad_new = func(x, *args)
