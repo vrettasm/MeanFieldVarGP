@@ -592,7 +592,7 @@ class FreeEnergy(object):
         :param verbose: boolean flag to display information about the
         convergence of the process.
 
-        :return: the optimal solution found by minimize().
+        :return: the optimal solution found by SGC().
         """
 
         def _analytic_grad_func(xin: array_t):
@@ -668,7 +668,9 @@ class FreeEnergy(object):
         print("Done!")
 
         # Get the final (optimal) results.
-        return opt_x, opt_fx
+        # We also return a copy of the SCG
+        # statistics for further analysis.
+        return opt_x, opt_fx, scg_minimize.stats
 
     # _end_def_
 
