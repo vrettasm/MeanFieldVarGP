@@ -411,7 +411,8 @@ class FreeEnergy(object):
         # _end_if_
 
         # Auxiliary quantity: (Y - H*m).
-        Y_minus_Hm = self.obs_values - self.h_operator.dot(mean_pts)
+        # Y_minus_Hm = self.obs_values - self.h_operator.dot(mean_pts)
+        Y_minus_Hm = self.obs_values.T - self.h_operator.dot(mean_pts)
 
         # Auxiliary quantity (for the E_obs).
         Z = Qi.dot(Y_minus_Hm)
@@ -420,7 +421,8 @@ class FreeEnergy(object):
         W = Ri.diagonal().T.dot(self.h_operator.dot(vars_pts))
 
         # These are the derivatives of E_{obs} w.r.t. the mean/var points.
-        kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm)
+        # kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm)
+        kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm).T
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
         kappa_2 = 0.5 * np.diag(self.h_operator.T.dot(Ri).dot(self.h_operator))
@@ -578,13 +580,19 @@ class FreeEnergy(object):
                                       Ecost_ds.flatten(order='C')), axis=0)
     # _end_def_
 
-    def find_minimum(self, x0, check_gradients=False, verbose=False):
+    def find_minimum(self, x0, maxiter: int = 100, x_tol: float = 1.0e-5,
+                     check_gradients=False, verbose=False):
         """
         Optimizes the free energy value (E_cost) by using the Scaled
         Conjugate Gradient (SGC) optimizer. The result is the final
         set of optimization variables.
 
         :param x0: initial set of variables to start the minimization.
+
+        :param maxiter: integer number of iterations in the minimization.
+
+        :param x_tol: float number of tolerance between two successive
+        solutions x_{k} and x_{k+1}.
 
         :param check_gradients: boolean flag to determine the checking
         of the gradients, before and after the minimization.
@@ -629,9 +637,14 @@ class FreeEnergy(object):
             print("------------------------------------\n")
         # _end_if_
 
+        # Ensure optimization variables have the correct types.
+        # Put lower limits to them to avoid invalid entries.
+        maxiter = np.maximum(int(maxiter), 100)
+        x_tol = np.maximum(float(x_tol), 0.001)
+
         # Setup SCG options.
-        options = {"max_it": 500, "display": verbose,
-                   "x_tol": 1.0e-5, "f_tol": 1.0e-6}
+        options = {"max_it": maxiter, "x_tol": x_tol, "f_tol": 1.0E-5,
+                   "display": verbose}
 
         # Create an SCG optimizer.
         scg_minimize = SCG(self.E_cost, options)
