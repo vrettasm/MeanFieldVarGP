@@ -49,8 +49,7 @@ class StochasticProcess(object):
         self._sigma = None
 
         # Initialize the energy and gradient lists.
-        # These will hold the lambdafied functions
-        # (for each dynamical system).
+        # These will hold the lambdafied functions.
         self.Esde = []
         self.dEsde_dm = []
         self.dEsde_ds = []
@@ -96,7 +95,7 @@ class StochasticProcess(object):
         # Sanity check.
         if self._sigma is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
-                                      f" Diffusion noise parameters have not set yet.")
+                                      f" SDE noise parameters have not set yet.")
         # _end_if_
 
         return np.atleast_1d(self._sigma)
@@ -123,8 +122,8 @@ class StochasticProcess(object):
             self._sigma = new_value
 
         else:
-            raise RuntimeError(f" {self.__class__.__name__}: Noise matrix"
-                               f" {new_value} is not positive definite.")
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" SDE noise vector {new_value} is not positive.")
         # _end_if_
 
     # _end_def_
@@ -137,7 +136,7 @@ class StochasticProcess(object):
         :return: the sample path.
         """
 
-        # Check if the sample path has benn created.
+        # Check if the sample path has been created.
         if self.xt is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Sample path has not been created.")
@@ -166,7 +165,7 @@ class StochasticProcess(object):
         :return: the time window of the path.
         """
 
-        # Check if the sample path is created.
+        # Check if the time-window is created.
         if self.tk is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Time window has not been created.")
@@ -234,15 +233,15 @@ class StochasticProcess(object):
         :return: observation times / observation values (noise free).
         """
 
-        # Sanity check (1): Check if the stochastic
-        # process has been created.
+        # Sanity check (1):
+        # Check if the stochastic process has been created.
         if (self.tk is None) or (self.xt is None):
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Sample path (or time window) have not been created.")
         # _end_def_
 
-        # Sanity check (2): Check if the sample-path
-        # and the time-window have equal lengths.
+        # Sanity check (2):
+        # Check if the sample-path and the time-window have equal lengths.
         if len(self.tk) != len(self.xt):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Sample path and time window do not have the same length.")
