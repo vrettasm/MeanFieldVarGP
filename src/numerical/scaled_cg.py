@@ -261,6 +261,7 @@ class SCG(object):
 
             # TBD:
             if success == 1:
+
                 # Check for termination.
                 if (np.abs(alpha * d).max() <= self.x_tol) and\
                         (np.abs(f_new - f_old) <= self.f_tol):
@@ -275,6 +276,8 @@ class SCG(object):
                 else:
                     # Update variables for the new position.
                     f_old = f_new
+
+                    # Copy the "new" gradient to the "old".
                     _copy_to(grad_old, grad_new)
 
                     # Evaluate function/gradient at the new point.
@@ -294,6 +297,7 @@ class SCG(object):
                         # Exit.
                         return x, fx
                 # _end_if_
+                
             # _end_if_
 
             # Adjust beta according to comparison ratio.
