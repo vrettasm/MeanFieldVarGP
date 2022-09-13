@@ -3,30 +3,27 @@ import numpy as np
 
 class SCG(object):
     """
-    This class creates a Scaled Conjugate Gradient (SCG) optimization
-    object. Attempts to find a local minimum of the function f(x).
-    Here 'x0' is a column vector and 'f' must returns a scalar value.
+    This class creates a Scaled Conjugate Gradient (SCG) optimization object.
+    The goal is to find a local minimum of the function f(x). Here the input
+    to 'f' (i.e. 'x0'), is a column vector.
 
-    The minimisation process uses also the gradient df(x)/dx. To speed
-    up the process, the input function is passing this gradient, along
-    with the function value.
-
-    The point at which 'f' has a local minimum is returned as 'x'. The
-    function value at that point (the minimum) is returned in "fx".
-
-    Additional information is passed to the 'stats' dictionary.
+    The minimisation process uses also the gradient df(x)/dx. To speed up the
+    process, the input function return this gradient, along with the function
+    value (thus we have less function calls).
     """
 
     __slots__ = ("f", "nit", "x_tol", "f_tol", "display", "stats")
 
     def __init__(self, func: callable, *args):
         """
-        Default constructor the SCG class.
+        Default constructor the SCG class. It sets up the parameters
+        for the optimization, such as: 1) number of max iterations,
+        2) thresholds, etc.
 
         :param func: is the objective function to be optimised.
 
         :param args: is a dictionary containing all additional
-        parameters for 'func'.
+                     parameters for 'func'.
         """
 
         # Check if we have given parameters.
@@ -49,13 +46,13 @@ class SCG(object):
 
         # Statistics dictionary.
         self.stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
-                      "dfx": np.zeros(self.nit, dtype=float), "f_eval": 0.0,
-                      "df_eval": 0.0, "beta": np.zeros(self.nit, dtype=float)}
+                      "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0.0,
+                      "beta": np.zeros(self.nit, dtype=float)}
     # _end_def_
 
     def __call__(self, x0, *args):
         """
-        The call of the object itself will enable the optimization.
+        The call of the object itself will start the optimization.
 
         :param x0: Initial search point.
 
@@ -92,8 +89,7 @@ class SCG(object):
         grad_old = np.zeros_like(grad_new)
 
         # Increase function / gradient evaluations by one.
-        self.stats["f_eval"] += 1
-        self.stats["df_eval"] += 1
+        self.stats["func_eval"] += 1
 
         # Store the current values (fx / dfx).
         f_old = f_now
@@ -157,8 +153,7 @@ class SCG(object):
                 _, g_plus = func(x_plus)
 
                 # Increase function/gradients evaluations by one.
-                self.stats["f_eval"] += 1
-                self.stats["df_eval"] += 1
+                self.stats["func_eval"] += 1
 
                 # Compute theta.
                 theta = (d.T.dot(g_plus - grad_new)) / sigma
@@ -181,8 +176,7 @@ class SCG(object):
             f_new = func(x_new, False)
 
             # Note that the gradient is computed anyway.
-            self.stats["f_eval"] += 1
-            self.stats["df_eval"] += 1
+            self.stats["func_eval"] += 1
 
             # Calculate the new comparison ratio.
             Delta = 2.0 * (f_new - f_old) / (alpha * mu)
@@ -237,8 +231,7 @@ class SCG(object):
                     f_now, grad_new = func(x, *args)
 
                     # Increase function/gradients evaluations by one.
-                    self.stats["f_eval"] += 1
-                    self.stats["df_eval"] += 1
+                    self.stats["func_eval"] += 1
 
                     # If the gradient is zero then exit.
                     if np.isclose(grad_new.T.dot(grad_new), 0.0):
@@ -269,11 +262,14 @@ class SCG(object):
                 d = -grad_new
                 count_success = 0
             else:
+
                 if success == 1:
                     gamma = np.maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
                     d = (gamma * d) - grad_new
                 # _end_if_
+
             # _end_if_
+            
         # _end_for_
 
         # Display a final (warning) to the user.
