@@ -91,7 +91,8 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
     def _load_functions(self):
         """
-        Auxiliary method that load the symbolic equations for the OU system.
+        Auxiliary method that loads the symbolic (lambdafied)
+        energy and gradient equations for the Ornstein-Uhlenbeck.
         """
 
         # Make sure to clear everything BEFORE we load the functions.
