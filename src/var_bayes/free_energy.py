@@ -4,7 +4,7 @@ from numpy import array as array_t
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
 
-from numerical.optim_scg import SCG
+from numerical.scaled_cg import SCG
 from numerical.utilities import cholesky_inv, log_det
 from dynamical_systems.stochastic_process import StochasticProcess
 
