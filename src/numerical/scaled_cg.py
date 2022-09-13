@@ -46,8 +46,7 @@ class SCG(object):
 
         # Statistics dictionary.
         self.stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
-                      "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0.0,
-                      "beta": np.zeros(self.nit, dtype=float)}
+                      "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0}
     # _end_def_
 
     def __call__(self, x0, *args):
@@ -88,7 +87,7 @@ class SCG(object):
         # Initialize old gradient vector.
         grad_old = np.zeros_like(grad_new)
 
-        # Increase function / gradient evaluations by one.
+        # Increase function evaluations by one.
         self.stats["func_eval"] += 1
 
         # Store the current values (fx / dfx).
@@ -152,7 +151,7 @@ class SCG(object):
                 # We evaluate the df(x_plus).
                 _, g_plus = func(x_plus)
 
-                # Increase function/gradients evaluations by one.
+                # Increase function evaluations by one.
                 self.stats["func_eval"] += 1
 
                 # Compute theta.
@@ -201,7 +200,6 @@ class SCG(object):
 
             # Store statistics.
             self.stats["fx"][j] = f_now
-            self.stats["beta"][j] = beta
             self.stats["dfx"][j] = total_grad
 
             # Used in debugging mode.
@@ -230,7 +228,7 @@ class SCG(object):
                     # Evaluate function/gradient at the new point.
                     f_now, grad_new = func(x, *args)
 
-                    # Increase function/gradients evaluations by one.
+                    # Increase function evaluations by one.
                     self.stats["func_eval"] += 1
 
                     # If the gradient is zero then exit.
@@ -269,7 +267,7 @@ class SCG(object):
                 # _end_if_
 
             # _end_if_
-            
+
         # _end_for_
 
         # Display a final (warning) to the user.
