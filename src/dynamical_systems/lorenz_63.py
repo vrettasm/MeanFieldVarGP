@@ -174,7 +174,8 @@ class Lorenz63(StochasticProcess):
 
     def _load_functions(self):
         """
-        Auxiliary method that load the symbolic equations for the L3D system.
+        Auxiliary method that loads the symbolic (lambdafied)
+        energy and gradient equations for the Lorenz63 SDE.
         """
 
         # Make sure to clear everything BEFORE we load the functions.
@@ -229,7 +230,7 @@ class Lorenz63(StochasticProcess):
         # Sanity check.
         if eqn_counter != 9:
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Some symbolic equations failed to load [{eqn_counter}].")
+                               f" Some symbolic equations failed to load [{eqn_counter}/9].")
         # _end_if_
 
     # _end_def_

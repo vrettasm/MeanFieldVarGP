@@ -142,7 +142,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         # Sanity check.
         if eqn_counter != 3:
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Some symbolic equations failed to load [{eqn_counter}].")
+                               f" Some symbolic equations failed to load [{eqn_counter}/3].")
         # _end_if_
 
     # _end_def_
