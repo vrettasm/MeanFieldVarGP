@@ -618,7 +618,7 @@ class FreeEnergy(object):
         if check_gradients:
 
             # Display the action.
-            print("Grad-Check |BEFORE| minimization ... ")
+            print("Grad-Check |BEFORE| minimization ...")
 
             # Get the grad-check error.
             error_t0 = check_grad(lambda x_in: self.E_cost(x_in, output_gradients=False),
@@ -626,7 +626,7 @@ class FreeEnergy(object):
 
             # Display the error.
             print(f" > Error = {error_t0:.3E}")
-            print("-------------------------------------\n")
+            print("------------------------------------\n")
         # _end_if_
 
         # Setup SCG options.
@@ -652,7 +652,7 @@ class FreeEnergy(object):
         if check_gradients:
 
             # Display the action.
-            print("Grad-Check |AFTER| minimization ... ")
+            print("Grad-Check |AFTER| minimization ...")
 
             # Get the grad-check error.
             error_tf = check_grad(lambda x_in: self.E_cost(x_in, output_gradients=False),
@@ -660,7 +660,7 @@ class FreeEnergy(object):
 
             # Display the error.
             print(f" > Error = {error_tf:.3E}")
-            print("-------------------------------------\n")
+            print("------------------------------------\n")
 
         # _end_if_
 
