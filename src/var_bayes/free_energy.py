@@ -63,8 +63,8 @@ class FreeEnergy(object):
                              f" Time window [t0, tf] is not increasing.")
         # _end_if_
 
-        # Make sure the observation related parameters
-        # are entered correctly as numpy arrays.
+        # Make sure the observation related parameters are
+        # entered correctly as numpy arrays (type = float).
         self.obs_times = np.asarray(obs_times, dtype=float)
         self.obs_noise = np.asarray(obs_noise, dtype=float)
         self.obs_values = np.asarray(obs_values, dtype=float)
@@ -230,9 +230,7 @@ class FreeEnergy(object):
         Energy of the initial state with a Gaussian
         prior q(x|t=0).
 
-        NOTE: Eq. (15) in the paper.
-
-        :param m0: marginal mean at t=0, (dim_D,).
+        :param m0: marginal mean at t=0, (dim_D).
 
         :param s0: marginal variance at t=0, (dim_D).
 
@@ -251,7 +249,7 @@ class FreeEnergy(object):
         # Sanity check.
         if not np.isfinite(E0):
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" KL0 is not finite number: {E0}")
+                               f" E0 is not a finite number: {E0}")
         # _end_if_
 
         # Auxiliary variable.
@@ -263,14 +261,14 @@ class FreeEnergy(object):
         dE0_ds0 = np.atleast_1d(0.5 * (one_ / self._tau0 - one_ / s0))
 
         # Kullback-Liebler and its derivatives at
-        # time t=0, (i.e. dKL0/dm(0), dKL0/ds(0))
+        # time t=0, (i.e. dE0/dm(0), dE0/ds(0))
         return 0.5 * E0, dE0_dm0, dE0_ds0
 
     # _end_def_
 
     def E_sde(self, mean_pts, vars_pts):
         """
-        Energy from SDE prior process.
+        Energy from the SDE prior process.
 
         :param mean_pts: optimized mean points.
 
@@ -377,7 +375,7 @@ class FreeEnergy(object):
         # Sanity check.
         if not np.isfinite(Esde):
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Esde is not finite number: {Esde}")
+                               f" Esde is not a finite number: {Esde}")
         # _end_if_
 
         # Return the total energy (including the correct scaling).
@@ -388,7 +386,7 @@ class FreeEnergy(object):
 
     def E_obs(self, mean_pts, vars_pts):
         """
-        Energy from Gaussian likelihood.
+        Energy from the Gaussian likelihood.
 
         :param mean_pts: optimized mean points.
 
@@ -465,35 +463,38 @@ class FreeEnergy(object):
         # Sanity check.
         if not np.isfinite(Eobs):
             raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Eobs is not finite number: {Eobs}")
+                               f" Eobs is not a finite number: {Eobs}")
         # _end_if_
 
-        # Return the total observation energy and its gradients.
+        # Return the total observation energy
+        # and its gradients.
         return 0.5 * Eobs, dEobs_dm, dEobs_ds
     # _end_def_
 
     def E_cost(self, x, output_gradients=True):
         """
         Total cost function value (scalar) and derivatives.
-        This is passed to the "scipy" optimization routine:
+        This is passed to the "scaled_cg" optimization:
 
-         --> minimize(E_cost, x0, method="BFGS", jac=True)
+         --> scaled_cg(E_cost, x0)
 
-        other alternatives are: CG, Newton-CG, L-BFGS-B, etc.
+        other alternatives are: BFGS, CG, Newton-CG, L-BFGS-B
+        from the scipy.optimize module.
 
-        :param x: the optimization variables. Here we take the mean
-        and variance points of the Lagrange polynomials.
+        :param x: the optimization variables. Here we use the
+        mean and variance points of the Lagrange polynomials.
 
-        :param output_gradients: boolean flag to whether include
-        the gradients in the output or not. This is used from the
-        minimize method to check the gradients.
+        :param output_gradients: boolean flag to whether include,
+        or not the gradients in the output. This is used when the
+        optimize method requires as output only the function f(x)
+        or also the gradient df(x)/dx.
 
-        NOTE: the gradients are computed anyway, regardless of the
+        NOTE: the gradients are computed always regardless of the
         boolean "output_gradients". This is because it speeds up
-        the minimization function.
+        the minimization function (less function calls).
 
-        :return: total energy value and derivatives (w.r.t. the mean
-        and variance points).
+        :return: total energy value and derivatives (with respect
+        to the input mean and variance points).
         """
 
         # Separate the mean from the variance points.
