@@ -411,7 +411,6 @@ class FreeEnergy(object):
         # _end_if_
 
         # Auxiliary quantity: (Y - H*m).
-        # Y_minus_Hm = self.obs_values - self.h_operator.dot(mean_pts)
         Y_minus_Hm = self.obs_values.T - self.h_operator.dot(mean_pts)
 
         # Auxiliary quantity (for the E_obs).
@@ -421,7 +420,6 @@ class FreeEnergy(object):
         W = Ri.diagonal().T.dot(self.h_operator.dot(vars_pts))
 
         # These are the derivatives of E_{obs} w.r.t. the mean/var points.
-        # kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm)
         kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm).T
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
