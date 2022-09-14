@@ -101,7 +101,7 @@ class Lorenz96(StochasticProcess):
     __slots__ = ("dim_d",)
 
     def __init__(self, sigma: array_t, theta: array_t,
-                 r_seed: int = None, dim_d: int = 40):
+                 dim_d: int = 40, r_seed: int = None):
         """
         Default constructor of the L96 object.
 
@@ -128,7 +128,7 @@ class Lorenz96(StochasticProcess):
         theta = np.asarray(theta, dtype=float)
 
         # Store the model dimensions.
-        self.dim_d = dim_d
+        self.dim_d = int(dim_d)
 
         # Check the dimensions of the input.
         if sigma.ndim == 0:
