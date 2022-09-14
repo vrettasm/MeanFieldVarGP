@@ -357,6 +357,10 @@ class FreeEnergy(object):
             dEn_dm_acc = np_zeros(4*dim_D, dtype=float)
             dEn_ds_acc = np_zeros(3*dim_D, dtype=float)
 
+            # Remove singleton dimensions.
+            ig_dEn_dm = np.squeeze(ig_dEn_dm)
+            ig_dEn_ds = np.squeeze(ig_dEn_ds)
+
             # Add the gradients from all dimensions.
             for i in range(dim_D):
 
