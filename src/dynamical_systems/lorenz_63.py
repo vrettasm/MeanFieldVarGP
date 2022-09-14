@@ -196,7 +196,7 @@ class Lorenz63(StochasticProcess):
             with open(Path(current_dir / f"energy_functions/L3D_Esde_{i}.sym"), "rb") as sym_Eqn:
 
                 # Append the energy function.
-                self.Esde.append(dl_load(sym_Eqn))
+                self.Esde.append(njit(dl_load(sym_Eqn)))
 
                 # Increase by one.
                 eqn_counter += 1
@@ -207,7 +207,7 @@ class Lorenz63(StochasticProcess):
             with open(Path(current_dir / f"gradient_functions/dL3D_Esde_dM{i}.sym"), "rb") as sym_Eqn:
 
                 # Append the grad_DM function.
-                self.dEsde_dm.append(dl_load(sym_Eqn))
+                self.dEsde_dm.append(njit(dl_load(sym_Eqn)))
 
                 # Increase by one.
                 eqn_counter += 1
@@ -218,7 +218,7 @@ class Lorenz63(StochasticProcess):
             with open(Path(current_dir / f"gradient_functions/dL3D_Esde_dS{i}.sym"), "rb") as sym_Eqn:
 
                 # Append the grad_DS function.
-                self.dEsde_ds.append(dl_load(sym_Eqn))
+                self.dEsde_ds.append(njit(dl_load(sym_Eqn)))
 
                 # Increase by one.
                 eqn_counter += 1

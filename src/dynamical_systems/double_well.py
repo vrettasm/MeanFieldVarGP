@@ -1,4 +1,5 @@
 import numpy as np
+from numba import njit
 from pathlib import Path
 from dill import load as dl_load
 from dynamical_systems.stochastic_process import StochasticProcess
@@ -117,7 +118,7 @@ class DoubleWell(StochasticProcess):
         with open(Path(current_dir / "energy_functions/DW_Esde_0.sym"), "rb") as sym_Eqn:
 
             # Append the energy function.
-            self.Esde.append(dl_load(sym_Eqn))
+            self.Esde.append(njit(dl_load(sym_Eqn)))
 
             # Increase by one.
             eqn_counter += 1
@@ -128,7 +129,7 @@ class DoubleWell(StochasticProcess):
         with open(Path(current_dir / "gradient_functions/dDW_Esde_dM0.sym"), "rb") as sym_Eqn:
 
             # Append the grad_DM function.
-            self.dEsde_dm.append(dl_load(sym_Eqn))
+            self.dEsde_dm.append(njit(dl_load(sym_Eqn)))
 
             # Increase by one.
             eqn_counter += 1
@@ -139,7 +140,7 @@ class DoubleWell(StochasticProcess):
         with open(Path(current_dir / "gradient_functions/dDW_Esde_dS0.sym"), "rb") as sym_Eqn:
 
             # Append the grad_DS function.
-            self.dEsde_ds.append(dl_load(sym_Eqn))
+            self.dEsde_ds.append(njit(dl_load(sym_Eqn)))
 
             # Increase by one.
             eqn_counter += 1
