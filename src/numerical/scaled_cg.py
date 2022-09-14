@@ -1,5 +1,19 @@
 import numpy as np
+from numba import njit
+from numpy import array as array_t
 
+
+@njit(fastmath=True)
+def _fast_sum_abs(x: array_t):
+    """
+    Local numba version of numpy functions.
+
+    :param x: input array (dim,)
+
+    :return: a much faster version of sum(abs(x)).
+    """
+    return np.sum(np.abs(x))
+# _end_def_
 
 class SCG(object):
     """
@@ -101,7 +115,7 @@ class SCG(object):
 
     # _end_def_
 
-    def __call__(self, x0, *args):
+    def __call__(self, x0: array_t, *args):
         """
         The call of the object itself will start the optimization.
 
@@ -115,7 +129,7 @@ class SCG(object):
 
         # Check for verbosity.
         if self.display:
-            print("SCG optimization started ...")
+            print("SCG: Optimization started ...")
         # _end_if_
 
         # Localize 'f'.
@@ -248,7 +262,7 @@ class SCG(object):
             # _end_if_
 
             # Total gradient.
-            total_grad = np.sum(np.abs(g_now))
+            total_grad = _fast_sum_abs(g_now)
 
             # Store statistics.
             self.stats["fx"][j] = f_now
@@ -297,7 +311,7 @@ class SCG(object):
                         # Exit.
                         return x, fx
                 # _end_if_
-                
+
             # _end_if_
 
             # Adjust beta according to comparison ratio.
