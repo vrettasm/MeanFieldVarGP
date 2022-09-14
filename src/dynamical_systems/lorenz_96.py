@@ -68,6 +68,24 @@ def shift_vectors(x: array_t) -> array_t:
     return np.roll(x, -1), np.roll(x, +1), np.roll(x, +2)
 # _end_def_
 
+@njit
+def shift_index(i: int, d: int):
+    """
+    Auxiliary function.
+
+    :param i: index (int) in circular vector.
+
+    :param d: total (int) vector dimensions.
+
+    :return: the indexes [i-2, i-1, i, i+1]
+    around a circular set of values from 0 to d.
+    """
+
+    return [np.mod(i - 2, d),
+            np.mod(i - 1, d),
+            i,
+            np.mod(i + 1, d)]
+# _end_def_
 
 @njit
 def _l96(x: array_t, u: array_t) -> array_t:
@@ -156,6 +174,10 @@ class Lorenz96(StochasticProcess):
 
         # Store the drift parameter.
         self.theta = theta
+
+        # Load the energy functions.
+        self._load_functions()
+
     # _end_def_
 
     @property
@@ -230,16 +252,155 @@ class Lorenz96(StochasticProcess):
         self.time_window = tk
     # _end_def_
 
-    def _load_functions(self):
+    def _construct_functions(self, _func_En: callable, _func_dM: callable, _func_dS: callable):
         """
-        Auxiliary method that loads the symbolic (lambdafied)
-        energy and gradient equations for the Lorenz96 SDE.
+        TBD
         """
 
         # Make sure to clear everything BEFORE we load the functions.
         self.Esde.clear()
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
+
+        def _l96_En(t, *args):
+
+            # State vector dimensions.
+            D = self.dim_d
+
+            # Extract the mean points.
+            mp = np.reshape(args[7: 7+160], (D, 4))
+
+            # Extract the variance points.
+            sp = np.reshape(args[167: 167+120], (D, 3))
+
+            # Extract the diffusion noise parameters.
+            sigma = np.array(args[287: 287+D])
+
+            # Extract the drift parameter.
+            theta = args[-1]
+
+            # Collect all the function values in this list.
+            f_values = []
+
+            # Iterate through all the system dimensions.
+            for i in range(D):
+
+                # Get the circular indexes first.
+                idx = shift_index(i, D)
+
+                # Pack the input parameters.
+                param = [*args[0:7],
+                         *mp[idx, :].flatten(),
+                         *sp[idx, :].flatten(),
+                         *sigma[idx], theta]
+
+                # Add the function value to the list.
+                f_values.append(_func_En(t, *param))
+            # _end_for_
+
+            # Convert the list to array (float).
+            return np.array(f_values, dtype=float)
+        # _end_def_
+
+        # Add the energy function.
+        self.Esde.append(_l96_En)
+
+        def _l96_dEn_dm(t, *args):
+
+            # State vector dimensions.
+            D = self.dim_d
+
+            # Extract the mean points.
+            mp = np.reshape(args[7: 7 + 160], (D, 4))
+
+            # Extract the variance points.
+            sp = np.reshape(args[167: 167 + 120], (D, 3))
+
+            # Extract the diffusion noise parameters.
+            sigma = np.array(args[287: 287 + D])
+
+            # Extract the drift parameter.
+            theta = args[-1]
+
+            # Collect all the function values in this list.
+            f_values = []
+
+            # Iterate through all the system dimensions.
+            for i in range(D):
+
+                # Get the circular indexes first.
+                idx = shift_index(i, D)
+
+                # Pack the input parameters.
+                param = [*args[0:7],
+                         *mp[idx, :].flatten(),
+                         *sp[idx, :].flatten(),
+                         *sigma[idx], theta]
+
+                # Add the function value to the list.
+                f_values.append(_func_dM(t, *param))
+            # _end_for_
+
+            # Convert the list to array (float).
+            return np.array(f_values, dtype=float)
+        # _end_def_
+
+        # Add the gradient function.
+        self.dEsde_dm.append(_l96_dEn_dm)
+
+        def _l96_dEn_ds(t, *args):
+
+            # State vector dimensions.
+            D = self.dim_d
+
+            # Extract the mean points.
+            mp = np.reshape(args[7: 7 + 160], (D, 4))
+
+            # Extract the variance points.
+            sp = np.reshape(args[167: 167 + 120], (D, 3))
+
+            # Extract the diffusion noise parameters.
+            sigma = np.array(args[287: 287 + D])
+
+            # Extract the drift parameter.
+            theta = args[-1]
+
+            # Collect all the function values in this list.
+            f_values = []
+
+            # Iterate through all the system dimensions.
+            for i in range(D):
+
+                # Get the circular indexes first.
+                idx = shift_index(i, D)
+
+                # Pack the input parameters.
+                param = [*args[0:7],
+                         *mp[idx, :].flatten(),
+                         *sp[idx, :].flatten(),
+                         *sigma[idx], theta]
+
+                # Add the function value to the list.
+                f_values.append(_func_dS(t, *param))
+            # _end_for_
+
+            # Convert the list to array (float).
+            return np.array(f_values, dtype=float)
+        # _end_def_
+
+        # Add the gradient function.
+        self.dEsde_ds.append(_l96_dEn_ds)
+
+    # _end_def_
+
+    def _load_functions(self):
+        """
+        Auxiliary method that loads the symbolic (lambdafied)
+        energy and gradient equations for the Lorenz96 SDE.
+        """
+
+        # Initial assignment of functions.
+        _func_En, _func_dM, _func_dS = None, None, None
 
         # Counter of the loaded equations.
         eqn_counter = 0
@@ -251,7 +412,7 @@ class Lorenz96(StochasticProcess):
         with open(Path(current_dir / "energy_functions/L96_Esde_0.sym"), "rb") as sym_Eqn:
 
             # Append the energy function.
-            self.Esde.append(njit(dl_load(sym_Eqn)))
+            _func_En = njit(dl_load(sym_Eqn))
 
             # Increase by one.
             eqn_counter += 1
@@ -262,7 +423,7 @@ class Lorenz96(StochasticProcess):
         with open(Path(current_dir / "gradient_functions/dL96_Esde_dM0.sym"), "rb") as sym_Eqn:
 
             # Append the grad_DM function.
-            self.dEsde_dm.append(njit(dl_load(sym_Eqn)))
+            _func_dM = njit(dl_load(sym_Eqn))
 
             # Increase by one.
             eqn_counter += 1
@@ -270,10 +431,10 @@ class Lorenz96(StochasticProcess):
         # _end_with_
 
         # Load the variance-gradient file.
-        with open(Path(current_dir / "gradient_functions/dL96_Esde_dS.sym"), "rb") as sym_Eqn:
+        with open(Path(current_dir / "gradient_functions/dL96_Esde_dS0.sym"), "rb") as sym_Eqn:
 
             # Append the grad_DS function.
-            self.dEsde_ds.append(njit(dl_load(sym_Eqn)))
+            _func_dS = njit(dl_load(sym_Eqn))
 
             # Increase by one.
             eqn_counter += 1
@@ -285,6 +446,9 @@ class Lorenz96(StochasticProcess):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Some symbolic equations failed to load [{eqn_counter}/3].")
         # _end_if_
+
+        # Construct the functions here.
+        self._construct_functions(_func_En, _func_dM, _func_dS)
 
     # _end_def_
 
