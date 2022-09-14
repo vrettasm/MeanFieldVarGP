@@ -3,18 +3,6 @@ from numba import njit
 from numpy import array as array_t
 
 
-@njit(fastmath=True)
-def _fast_sum_abs(x: array_t):
-    """
-    Local numba version of numpy functions.
-
-    :param x: input array (dim,)
-
-    :return: a much faster version of sum(abs(x)).
-    """
-    return np.sum(np.abs(x))
-# _end_def_
-
 class SCG(object):
     """
     This class creates a Scaled Conjugate Gradient (SCG) optimization object.
@@ -112,6 +100,20 @@ class SCG(object):
         :return: the statistics dictionary.
         """
         return self.stats
+
+    # _end_def_
+
+    @staticmethod
+    @njit(fastmath=True)
+    def _fast_sum_abs(x: array_t):
+        """
+        Local numba version of numpy functions.
+
+        :param x: input array (dim,)
+
+        :return: a much faster version of sum(abs(x)).
+        """
+        return np.sum(np.abs(x))
 
     # _end_def_
 
@@ -262,7 +264,7 @@ class SCG(object):
             # _end_if_
 
             # Total gradient.
-            total_grad = _fast_sum_abs(g_now)
+            total_grad = self._fast_sum_abs(g_now)
 
             # Store statistics.
             self.stats["fx"][j] = f_now
