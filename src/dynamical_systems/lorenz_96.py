@@ -1,5 +1,7 @@
 import numpy as np
 from numba import njit
+from pathlib import Path
+from dill import load as dl_load
 from numpy import array as array_t
 from dynamical_systems.stochastic_process import StochasticProcess
 
@@ -226,6 +228,64 @@ class Lorenz96(StochasticProcess):
 
         # Store the time window (inference).
         self.time_window = tk
+    # _end_def_
+
+    def _load_functions(self):
+        """
+        Auxiliary method that loads the symbolic (lambdafied)
+        energy and gradient equations for the Lorenz96 SDE.
+        """
+
+        # Make sure to clear everything BEFORE we load the functions.
+        self.Esde.clear()
+        self.dEsde_dm.clear()
+        self.dEsde_ds.clear()
+
+        # Counter of the loaded equations.
+        eqn_counter = 0
+
+        # Get the current directory of the file.
+        current_dir = Path(__file__).resolve().parent
+
+        # Load the energy file.
+        with open(Path(current_dir / "energy_functions/L96_Esde_0.sym"), "rb") as sym_Eqn:
+
+            # Append the energy function.
+            self.Esde.append(njit(dl_load(sym_Eqn)))
+
+            # Increase by one.
+            eqn_counter += 1
+
+        # _end_with_
+
+        # Load the mean-gradient file.
+        with open(Path(current_dir / "gradient_functions/dL96_Esde_dM0.sym"), "rb") as sym_Eqn:
+
+            # Append the grad_DM function.
+            self.dEsde_dm.append(njit(dl_load(sym_Eqn)))
+
+            # Increase by one.
+            eqn_counter += 1
+
+        # _end_with_
+
+        # Load the variance-gradient file.
+        with open(Path(current_dir / "gradient_functions/dL96_Esde_dS.sym"), "rb") as sym_Eqn:
+
+            # Append the grad_DS function.
+            self.dEsde_ds.append(njit(dl_load(sym_Eqn)))
+
+            # Increase by one.
+            eqn_counter += 1
+
+        # _end_with_
+
+        # Sanity check.
+        if eqn_counter != 3:
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Some symbolic equations failed to load [{eqn_counter}/3].")
+        # _end_if_
+
     # _end_def_
 
 # _end_class_
