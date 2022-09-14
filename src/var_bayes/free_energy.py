@@ -216,7 +216,7 @@ class FreeEnergy(object):
         Accessor method (setter).
 
         NOTE: This should be used only if we optimize
-        the diffusion (Sgima) parameters.
+        the diffusion (Sigma) parameters.
 
         :param new_value: the new value we want to set.
 
@@ -291,11 +291,15 @@ class FreeEnergy(object):
         # Initialize energy for the SDE.
         Esde = 0.0
 
+        # Localize numpy functions.
+        np_abs = np.abs
+        np_zeros = np.zeros
+
         # Initialize gradients arrays.
         # > dEsde_dm := dEsde(tk)/dm(tk)
         # > dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = np.zeros((L, 4*dim_D), dtype=float)
-        dEsde_ds = np.zeros((L, 3*dim_D), dtype=float)
+        dEsde_dm = np_zeros((L, 4*dim_D), dtype=float)
+        dEsde_ds = np_zeros((L, 3*dim_D), dtype=float)
 
         # Inverted diagonal noise vector.
         inv_sigma = 1.0 / self.sigma
@@ -309,7 +313,7 @@ class FreeEnergy(object):
             # NOTE: This should not change for equally spaced
             # observations. This is here to ensure that small
             # 'dt' deviations will not affect the algorithm.
-            delta_t = np.abs(tj-ti)
+            delta_t = np_abs(tj-ti)
 
             # Mid-point intervals (for the evaluation of the Esde function).
             # NOTE: These should not change for equally spaced observations.
@@ -350,8 +354,8 @@ class FreeEnergy(object):
 
             # Local accumulators. These will be used to sum the
             # gradients over all the system dimensions "dim_D".
-            dEn_dm_acc = np.zeros(4*dim_D, dtype=float)
-            dEn_ds_acc = np.zeros(3*dim_D, dtype=float)
+            dEn_dm_acc = np_zeros(4*dim_D, dtype=float)
+            dEn_ds_acc = np_zeros(3*dim_D, dtype=float)
 
             # Add the gradients from all dimensions.
             for i in range(dim_D):
@@ -526,19 +530,19 @@ class FreeEnergy(object):
         Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
         Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
-        # Localize reshape function (for speed up).
-        reshape_ = np.reshape
+        # Localize reshape function.
+        np_reshape = np.reshape
 
         # Copy the gradients of the first interval.
-        Ecost_dm[:, 0:4] = reshape_(dEsde_dm[0], (self.dim_D, 4))
-        Ecost_ds[:, 0:3] = reshape_(dEsde_ds[0], (self.dim_D, 3))
+        Ecost_dm[:, 0:4] = np_reshape(dEsde_dm[0], (self.dim_D, 4))
+        Ecost_ds[:, 0:3] = np_reshape(dEsde_ds[0], (self.dim_D, 3))
 
         # Iterate over the rest (L-1) intervals.
         for n in range(1, self.obs_times.size - 1):
 
             # Reshape the n-th gradients.
-            temp_dm = reshape_(dEsde_dm[n], (self.dim_D, 4))
-            temp_ds = reshape_(dEsde_ds[n], (self.dim_D, 3))
+            temp_dm = np_reshape(dEsde_dm[n], (self.dim_D, 4))
+            temp_ds = np_reshape(dEsde_ds[n], (self.dim_D, 3))
 
             # Add the link between intervals (at observation times).
             Ecost_dm[:, (3 * n)] += temp_dm[:, 0]
