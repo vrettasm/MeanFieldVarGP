@@ -78,7 +78,8 @@ def shift_index(i: int, d: int):
     :param d: total (int) vector dimensions.
 
     :return: the indexes [i-2, i-1, i, i+1]
-    around a circular set of values from 0 to d.
+             around a circular set of values
+             from 0 to d.
     """
 
     return [np.mod(i - 2, d),
@@ -252,12 +253,14 @@ class Lorenz96(StochasticProcess):
         self.time_window = tk
     # _end_def_
 
-    def _construct_functions(self, _func_En: callable, _func_dM: callable, _func_dS: callable):
+    def _construct_functions(self, _func_En: callable, _func_dM: callable,
+                             _func_dS: callable):
         """
         TBD
         """
 
-        # Make sure to clear everything BEFORE we load the functions.
+        # Make sure to clear everything
+        # BEFORE we make the functions.
         self.Esde.clear()
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
@@ -267,14 +270,21 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
+            # The first seven variables
+            # are the fixed time-points.
+            # So we have to exclude them.
+            i0 = 7
+
             # Extract the mean points.
-            mp = np.reshape(args[7: 7+160], (D, 4))
+            i1 = i0 + (D * 4)
+            mp = np.reshape(args[i0: i1], (D, 4))
 
             # Extract the variance points.
-            sp = np.reshape(args[167: 167+120], (D, 3))
+            i2 = i1 + (D * 3)
+            sp = np.reshape(args[i1: i2], (D, 3))
 
             # Extract the diffusion noise parameters.
-            sigma = np.array(args[287: 287+D])
+            sigma = np.array(args[i2: i2 + D])
 
             # Extract the drift parameter.
             theta = args[-1]
@@ -289,7 +299,7 @@ class Lorenz96(StochasticProcess):
                 idx = shift_index(i, D)
 
                 # Pack the input parameters.
-                param = [*args[0:7],
+                param = [*args[0:i0],
                          *mp[idx, :].flatten(),
                          *sp[idx, :].flatten(),
                          *sigma[idx], theta]
@@ -298,8 +308,8 @@ class Lorenz96(StochasticProcess):
                 f_values.append(_func_En(t, *param))
             # _end_for_
 
-            # Convert the list to array (float).
-            return np.array(f_values, dtype=float)
+            # Return the list.
+            return f_values
         # _end_def_
 
         # Add the energy function.
@@ -310,14 +320,21 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
+            # The first seven variables
+            # are the fixed time-points.
+            # So we have to exclude them.
+            i0 = 7
+
             # Extract the mean points.
-            mp = np.reshape(args[7: 7 + 160], (D, 4))
+            i1 = i0 + (D * 4)
+            mp = np.reshape(args[i0: i1], (D, 4))
 
             # Extract the variance points.
-            sp = np.reshape(args[167: 167 + 120], (D, 3))
+            i2 = i1 + (D * 3)
+            sp = np.reshape(args[i1: i2], (D, 3))
 
             # Extract the diffusion noise parameters.
-            sigma = np.array(args[287: 287 + D])
+            sigma = np.array(args[i2: i2 + D])
 
             # Extract the drift parameter.
             theta = args[-1]
@@ -332,7 +349,7 @@ class Lorenz96(StochasticProcess):
                 idx = shift_index(i, D)
 
                 # Pack the input parameters.
-                param = [*args[0:7],
+                param = [*args[0:i0],
                          *mp[idx, :].flatten(),
                          *sp[idx, :].flatten(),
                          *sigma[idx], theta]
@@ -341,8 +358,8 @@ class Lorenz96(StochasticProcess):
                 f_values.append(_func_dM(t, *param))
             # _end_for_
 
-            # Convert the list to array (float).
-            return np.array(f_values, dtype=float)
+            # Return the list.
+            return f_values
         # _end_def_
 
         # Add the gradient function.
@@ -353,14 +370,21 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
+            # The first seven variables
+            # are the fixed time-points.
+            # So we have to exclude them.
+            i0 = 7
+
             # Extract the mean points.
-            mp = np.reshape(args[7: 7 + 160], (D, 4))
+            i1 = i0 + (D * 4)
+            mp = np.reshape(args[i0: i1], (D, 4))
 
             # Extract the variance points.
-            sp = np.reshape(args[167: 167 + 120], (D, 3))
+            i2 = i1 + (D * 3)
+            sp = np.reshape(args[i1: i2], (D, 3))
 
             # Extract the diffusion noise parameters.
-            sigma = np.array(args[287: 287 + D])
+            sigma = np.array(args[i2: i2 + D])
 
             # Extract the drift parameter.
             theta = args[-1]
@@ -375,7 +399,7 @@ class Lorenz96(StochasticProcess):
                 idx = shift_index(i, D)
 
                 # Pack the input parameters.
-                param = [*args[0:7],
+                param = [*args[0:i0],
                          *mp[idx, :].flatten(),
                          *sp[idx, :].flatten(),
                          *sigma[idx], theta]
@@ -384,8 +408,8 @@ class Lorenz96(StochasticProcess):
                 f_values.append(_func_dS(t, *param))
             # _end_for_
 
-            # Convert the list to array (float).
-            return np.array(f_values, dtype=float)
+            # Return the list.
+            return f_values
         # _end_def_
 
         # Add the gradient function.
