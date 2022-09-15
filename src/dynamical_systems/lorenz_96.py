@@ -69,7 +69,7 @@ def shift_vectors(x: array_t) -> array_t:
 # _end_def_
 
 @njit
-def circular_index(i: int, d: int):
+def circular_index(i: int, d: int) -> list:
     """
     Auxiliary function.
 
@@ -77,15 +77,15 @@ def circular_index(i: int, d: int):
 
     :param d: total (int) vector dimensions.
 
-    :return: the indexes [i-2, i-1, i, i+1]
+    :return: the indexes [i, i+1, i-1, i-2]
              around a circular set of values
-             from 0 to d.
+             from 0 to D-1.
     """
 
-    return [np.mod(i - 2, d),
+    return [i,
+            np.mod(i + 1, d),
             np.mod(i - 1, d),
-            i,
-            np.mod(i + 1, d)]
+            np.mod(i - 2, d)]
 # _end_def_
 
 @njit
