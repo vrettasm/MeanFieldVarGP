@@ -1,6 +1,8 @@
 import time
 import numpy as np
+from numpy import zeros
 from numpy import array as array_t
+from numpy import squeeze as squeeze
 from joblib import Parallel, delayed
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
@@ -272,7 +274,7 @@ class FreeEnergy(object):
 
     # _end_def_
     @staticmethod
-    def single_interval(n, ti, tj, _drift_fun_sde, _grad_fun_mp,
+    def single_interval(ti, tj, _drift_fun_sde, _grad_fun_mp,
                         _grad_fun_vp, mean_pts, vars_pts, sigma,
                         theta, inv_sigma):
 
@@ -287,8 +289,8 @@ class FreeEnergy(object):
         c = float(delta_t/2.0)
 
         # Separate variables for efficiency.
-        nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
-        nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
+        # nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
+        # nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
 
         # Total set of input parameters (pack).
         # NOTE: if everything is done properly
@@ -299,16 +301,16 @@ class FreeEnergy(object):
         #
         params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
                   ti, ti + c, ti + (2 * c),
-                  *nth_mean_points.flatten(),
-                  *nth_vars_points.flatten(),
+                  *mean_pts.flatten(),
+                  *vars_pts.flatten(),
                   *sigma, *theta]
 
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
         #
         # Scale the (partial) energy with the inverse noise.
-        Esde = quad_vec(lambda t: _drift_fun_sde(t, *params),
-                         ti, tj)[0].dot(inv_sigma)
+        Esde = inv_sigma.dot(quad_vec(lambda t: _drift_fun_sde(t, *params),
+                                      ti, tj)[0])
 
         # Solve the integrals of dEsde(t)/dMp in [ti, tj].
         integral_dEn_dm = quad_vec(lambda t: _grad_fun_mp(t, *params),
@@ -317,12 +319,25 @@ class FreeEnergy(object):
         # Solve the integrals of dEsde(t)/dSp in [ti, tj].
         integral_dEn_ds = quad_vec(lambda t: _grad_fun_vp(t, *params),
                                    ti, tj)[0]
+        # Sanity check.
+        if inv_sigma.size == 1:
 
-        # NOTE: the correct dimensions are (D x 4).
-        dEsde_dm = 0.5 * inv_sigma.dot(integral_dEn_dm)
+            # Remove singleton dimensions.
+            Esde = squeeze(Esde)
 
-        # NOTE: the correct dimensions are (D x 3).
-        dEsde_ds = 0.5 * inv_sigma.dot(integral_dEn_ds)
+            # This way we avoid errors in 1D systems.
+            dEsde_dm = 0.5 * squeeze(inv_sigma*integral_dEn_dm)
+            dEsde_ds = 0.5 * squeeze(inv_sigma*integral_dEn_ds)
+
+        else:
+
+            # NOTE: the correct dimensions are (D x 4).
+            dEsde_dm = 0.5 * inv_sigma.dot(integral_dEn_dm)
+
+            # NOTE: the correct dimensions are (D x 3).
+            dEsde_ds = 0.5 * inv_sigma.dot(integral_dEn_ds)
+
+        # _end_if_
 
         return Esde, dEsde_dm, dEsde_ds
     # _end_def_
@@ -339,6 +354,7 @@ class FreeEnergy(object):
         its gradients with respect to the mean & variance points.
         """
 
+        # Local copy of the single interval function.
         _single_interval = self.single_interval
 
         # Get the system dimensions once.
@@ -354,89 +370,36 @@ class FreeEnergy(object):
         # Initialize energy for the SDE.
         Esde = 0.0
 
-        # Localize numpy functions.
-        np_zeros = np.zeros
-
-        # Initialize gradients arrays.
-        # > dEsde_dm := dEsde(tk)/dm(tk)
-        # > dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = np_zeros((L, 4*dim_D), dtype=float)
-        dEsde_ds = np_zeros((L, 3*dim_D), dtype=float)
+        # Initialize the gradients arrays.
+        # -> dEsde_dm := dEsde(tk)/dm(tk)
+        # -> dEsde_ds := dEsde(tk)/ds(tk)
+        dEsde_dm = zeros((L, 4*dim_D), dtype=float)
+        dEsde_ds = zeros((L, 3*dim_D), dtype=float)
 
         # Inverted diagonal noise vector.
-        inv_sigma = 1.0 / self.sigma
+        inv_sigma = np.atleast_1d(1.0 / self.sigma)
 
         # Run the 'L' intervals in parallel.
-        results = Parallel(n_jobs=6)(
-            delayed(_single_interval)(n, obs_times[n], obs_times[n+1],
+        # NOTE: For low dimensional systems (e.g. D < 10) it
+        # is preferred to switch the backend to "threading".
+        results = Parallel(n_jobs=6, backend="loky")(
+            delayed(_single_interval)(obs_times[n], obs_times[n+1],
                                       self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
-                                      mean_pts, vars_pts, self.sigma, self.theta, inv_sigma) for n in range(L)
+                                      mean_pts[:, (3 * n): (3 * n) + 4],
+                                      vars_pts[:, (2 * n): (2 * n) + 3],
+                                      self.sigma, self.theta, inv_sigma) for n in range(L)
         )
 
-        # Extract all the result.
+        # Extract all the result from the parallel run.
         for i, result_i in enumerate(results, start=0):
+
+            # Accumulate the Esde here.
             Esde += result_i[0]
+
+            # The gradients will be accumulated in the E_cost.
             dEsde_dm[i] = result_i[1]
             dEsde_ds[i] = result_i[2]
         # _end_for_
-
-        '''
-        # Calculate energy from all 'L' time intervals.
-        for n in range(L):
-
-            # Take the limits of the observation's interval.
-            ti, tj = obs_times[n], obs_times[n+1]
-
-            # NOTE: This should not change for equally spaced
-            # observations. This is here to ensure that small
-            # 'dt' deviations will not affect the algorithm.
-            delta_t = np_abs(tj-ti)
-
-            # Mid-point intervals (for the evaluation of the Esde function).
-            # NOTE: These should not change for equally spaced observations.
-            h = float(delta_t/3.0)
-            c = float(delta_t/2.0)
-
-            # Separate variables for efficiency.
-            nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
-            nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
-
-            # Total set of input parameters (pack).
-            # NOTE: if everything is done properly
-            # then the following two must be true:
-            #
-            #   a) np.isclose(ti + (3 * h), tj)
-            #   b) np.isclose(ti + (2 * c), tj)
-            #
-            params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
-                      ti, ti + c, ti + (2 * c),
-                      *nth_mean_points.flatten(),
-                      *nth_vars_points.flatten(),
-                      *self.sigma, *self.theta]
-
-            # We use the lambda functions here to fix all the
-            # additional input parameters except the time "t".
-            #
-            # Scale the (partial) energy with the inverse noise.
-            Esde += quad_vec(lambda t: self.drift_fun_sde(t, *params),
-                             ti, tj)[0].dot(inv_sigma)
-
-            # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-            integral_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params),
-                                       ti, tj)[0]
-
-            # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-            integral_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
-                                       ti, tj)[0]
-
-            # NOTE: the correct dimensions are (D x 4).
-            dEsde_dm[n] = 0.5 * inv_sigma.dot(integral_dEn_dm)
-
-            # NOTE: the correct dimensions are (D x 3).
-            dEsde_ds[n] = 0.5 * inv_sigma.dot(integral_dEn_ds)
-
-        # _end_for_
-        '''
 
         # Sanity check.
         if not np.isfinite(Esde):
@@ -495,11 +458,11 @@ class FreeEnergy(object):
         Eobs = 0.0
 
         # Initialize gradients arrays.
-        dEobs_dm = np.zeros((self.dim_D, self.num_M), dtype=float)
-        dEobs_ds = np.zeros((self.dim_D, self.num_M), dtype=float)
+        dEobs_dm = zeros((self.dim_D, self.num_M), dtype=float)
+        dEobs_ds = zeros((self.dim_D, self.num_M), dtype=float)
 
         # Remove singleton dimensions.
-        kappa_1 = np.squeeze(kappa_1)
+        kappa_1 = squeeze(kappa_1)
 
         # Calculate partial energies from all 'M' observations.
         # NOTE: The gradients are given by:
@@ -592,8 +555,8 @@ class FreeEnergy(object):
         Ecost = E0 + Esde + Eobs
 
         # Put all gradients together.
-        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
-        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
+        Ecost_dm = zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
+        Ecost_ds = zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
         # Copy the gradients of the first interval.
         Ecost_dm[:, 0:4] = np_reshape(dEsde_dm[0], (self.dim_D, 4))
