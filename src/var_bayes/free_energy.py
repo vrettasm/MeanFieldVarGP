@@ -328,8 +328,8 @@ class FreeEnergy(object):
             # NOTE: if everything is done properly
             # then the following two must be true:
             #
-            #   a) ti + (3 * h) == tj
-            #   b) ti + (2 * c) == tj
+            #   a) np.isclose(ti + (3 * h), tj)
+            #   b) np.isclose(ti + (2 * c), tj)
             #
             params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
                       ti, ti + c, ti + (2 * c),
@@ -352,31 +352,11 @@ class FreeEnergy(object):
             ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
                                  ti, tj)[0]
 
-            # Local accumulators. These will be used to sum the
-            # gradients over all the system dimensions "dim_D".
-            dEn_dm_acc = np_zeros(4*dim_D, dtype=float)
-            dEn_ds_acc = np_zeros(3*dim_D, dtype=float)
-
-            # Remove singleton dimensions.
-            ig_dEn_dm = np.squeeze(ig_dEn_dm)
-            ig_dEn_ds = np.squeeze(ig_dEn_ds)
-
-            # Add the gradients from all dimensions.
-            for i in range(dim_D):
-
-                # Mean-point derivatives.
-                dEn_dm_acc += ig_dEn_dm[i] * inv_sigma[i]
-
-                # Variance-point derivatives.
-                dEn_ds_acc += ig_dEn_ds[i] * inv_sigma[i]
-
-            # _end_for_
-
             # NOTE: the correct dimensions are (D x 4).
-            dEsde_dm[n] = 0.5 * dEn_dm_acc
+            dEsde_dm[n] = 0.5 * inv_sigma.dot(ig_dEn_dm)
 
             # NOTE: the correct dimensions are (D x 3).
-            dEsde_ds[n] = 0.5 * dEn_ds_acc
+            dEsde_ds[n] = 0.5 * inv_sigma.dot(ig_dEn_ds)
 
         # _end_for_
 
