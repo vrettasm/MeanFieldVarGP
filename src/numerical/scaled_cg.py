@@ -275,7 +275,7 @@ class SCG(object):
                 print(f"It= {j:>5}: F(x)= {f_now:.3E} -/- Sum(Gradients)= {total_grad:.3E}")
             # _end_if_
 
-            # TBD:
+            # Check for success.
             if success == 1:
 
                 # Check for termination.
