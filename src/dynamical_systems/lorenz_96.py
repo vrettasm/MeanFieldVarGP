@@ -256,7 +256,28 @@ class Lorenz96(StochasticProcess):
     def _construct_functions(self, _func_En: callable, _func_dM: callable,
                              _func_dS: callable):
         """
-        TBD
+        This function builds the Energy and Gradients functions for the
+        Lorenz96 system, for an arbitrary value of system dimensions D.
+
+        Because the system equations involve different indexes (circular
+        values) [i-2, i-1, i, i+1], we have to take extra care and put
+        all the equations in the right order. Inevitably this code will
+        be slow, but it will allow the used to set any value for 'D' and
+        test the algorithms
+
+        :param _func_En: this (callable) function is the Esde expression
+        that we have derived from the symbolic code.
+
+        :param _func_dM: this (callable) function is the dEsde_dM expression
+        that we have derived from the symbolic code.
+
+        :param _func_dS: this (callable) function is the dEsde_dS expression
+        that we have derived from the symbolic code.
+
+        NOTE: this function must be called after the symbolic equations have
+        been loaded.
+
+        :return: None.
         """
 
         # Make sure to clear everything
@@ -264,6 +285,11 @@ class Lorenz96(StochasticProcess):
         self.Esde.clear()
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
+
+        # Localize numpy functions.
+        # This might improve performance.
+        _zeros = np.zeros
+        _reshape = np.reshape
 
         def _l96_En(t, *args):
 
@@ -277,20 +303,23 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = np.reshape(args[i0: i1], (D, 4))
+            mp = _reshape(args[i0: i1], (D, 4))
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = np.reshape(args[i1: i2], (D, 3))
+            sp = _reshape(args[i1: i2], (D, 3))
 
             # Extract the diffusion noise parameters.
-            sigma = np.array(args[i2: i2 + D])
+            sigma = array_t(args[i2: i2 + D])
 
             # Extract the drift parameter.
             theta = args[-1]
 
             # Collect all the function values in this list.
             f_values = []
+
+            # Localize append method.
+            f_values_append = f_values.append
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -305,7 +334,7 @@ class Lorenz96(StochasticProcess):
                          *sigma[idx], theta]
 
                 # Add the function value to the list.
-                f_values.append(_func_En(t, *param))
+                f_values_append(_func_En(t, *param))
             # _end_for_
 
             # Return the list.
@@ -327,20 +356,23 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = np.reshape(args[i0: i1], (D, 4))
+            mp = _reshape(args[i0: i1], (D, 4))
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = np.reshape(args[i1: i2], (D, 3))
+            sp = _reshape(args[i1: i2], (D, 3))
 
             # Extract the diffusion noise parameters.
-            sigma = np.array(args[i2: i2 + D])
+            sigma = array_t(args[i2: i2 + D])
 
             # Extract the drift parameter.
             theta = args[-1]
 
             # Collect all the function values in this list.
             f_values = []
+
+            # Localize append method.
+            f_values_append = f_values.append
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -358,15 +390,15 @@ class Lorenz96(StochasticProcess):
                 _grad_dm = _func_dM(t, *param)
 
                 # Initialize temporary gradient with zeros.
-                _tmp_dm = np.zeros(D*4, dtype=float)
+                _tmp_dm = _zeros(D*4, dtype=float)
 
                 # Unroll the gradients.
                 for j, ix in enumerate(idx):
                     _tmp_dm[4*ix: 4*(ix + 1)] = _grad_dm[4*j: 4*(j + 1)]
                 # _end_for_
 
-                # Add the function value to the list.
-                f_values.append(_tmp_dm)
+                # Add the gradient array.
+                f_values_append(_tmp_dm)
             # _end_for_
 
             # Return the list.
@@ -388,20 +420,23 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = np.reshape(args[i0: i1], (D, 4))
+            mp = _reshape(args[i0: i1], (D, 4))
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = np.reshape(args[i1: i2], (D, 3))
+            sp = _reshape(args[i1: i2], (D, 3))
 
             # Extract the diffusion noise parameters.
-            sigma = np.array(args[i2: i2 + D])
+            sigma = array_t(args[i2: i2 + D])
 
             # Extract the drift parameter.
             theta = args[-1]
 
             # Collect all the function values in this list.
             f_values = []
+
+            # Localize append method.
+            f_values_append = f_values.append
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -419,15 +454,15 @@ class Lorenz96(StochasticProcess):
                 _grad_ds = _func_dS(t, *param)
 
                 # Initialize temporary gradient with zeros.
-                _tmp_ds = np.zeros(D*3, dtype=float)
+                _tmp_ds = _zeros(D*3, dtype=float)
 
                 # Unroll the gradients.
                 for j, ix in enumerate(idx):
                     _tmp_ds[3*ix: 3*(ix + 1)] = _grad_ds[3*j: 3*(j + 1)]
                 # _end_for_
 
-                # Add the function value to the list.
-                f_values.append(_tmp_ds)
+                # Add the gradient array.
+                f_values_append(_tmp_ds)
             # _end_for_
 
             # Return the list.
