@@ -103,20 +103,6 @@ class SCG(object):
 
     # _end_def_
 
-    @staticmethod
-    @njit(fastmath=True)
-    def _fast_sum_abs(x: array_t):
-        """
-        Local numba version of numpy functions.
-
-        :param x: input array (dim,)
-
-        :return: a much faster version of sum(abs(x)).
-        """
-        return np.sum(np.abs(x))
-
-    # _end_def_
-
     def __call__(self, x0: array_t, *args):
         """
         The call of the object itself will start the optimization.
@@ -128,6 +114,18 @@ class SCG(object):
         :return: 1)  x: the point where the minimum was found,
                  2) fx: the function value (at the minimum point).
         """
+
+        @njit(fastmath=True)
+        def _fast_sum_abs(x_in: array_t):
+            """
+            Nested numba version of numpy functions.
+
+            :param x_in: input array (dim,)
+
+            :return: a much faster version of sum(abs(.)).
+            """
+            return np.sum(np.abs(x_in))
+        # _end_def_
 
         # Check for verbosity.
         if self.display:
@@ -264,7 +262,7 @@ class SCG(object):
             # _end_if_
 
             # Total gradient.
-            total_grad = self._fast_sum_abs(g_now)
+            total_grad = _fast_sum_abs(g_now)
 
             # Store statistics.
             self.stats["fx"][j] = f_now
