@@ -11,6 +11,11 @@ from dynamical_systems.stochastic_process import StochasticProcess
 
 class FreeEnergy(object):
 
+    # Declare all the class variables here.
+    __slots__ = ("drift_fun_sde", "grad_fun_mp", "grad_fun_vp", "_mu0", "_tau0",
+                 "theta", "sigma", "tk", "obs_times", "obs_noise", "obs_values",
+                 "h_operator", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks")
+
     def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
                  h_operator: array_t = None):
