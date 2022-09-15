@@ -345,18 +345,18 @@ class FreeEnergy(object):
                              ti, tj)[0].dot(inv_sigma)
 
             # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-            ig_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params),
-                                 ti, tj)[0]
+            integral_dEn_dm = quad_vec(lambda t: self.grad_fun_mp(t, *params),
+                                       ti, tj)[0]
 
             # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-            ig_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
-                                 ti, tj)[0]
+            integral_dEn_ds = quad_vec(lambda t: self.grad_fun_vp(t, *params),
+                                       ti, tj)[0]
 
             # NOTE: the correct dimensions are (D x 4).
-            dEsde_dm[n] = 0.5 * inv_sigma.dot(ig_dEn_dm)
+            dEsde_dm[n] = 0.5 * inv_sigma.dot(integral_dEn_dm)
 
             # NOTE: the correct dimensions are (D x 3).
-            dEsde_ds[n] = 0.5 * inv_sigma.dot(ig_dEn_ds)
+            dEsde_ds[n] = 0.5 * inv_sigma.dot(integral_dEn_ds)
 
         # _end_for_
 
