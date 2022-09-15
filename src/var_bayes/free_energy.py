@@ -272,6 +272,7 @@ class FreeEnergy(object):
         return 0.5 * E0, dE0_dm0, dE0_ds0
 
     # _end_def_
+
     @staticmethod
     def single_interval(ti, tj, _drift_fun_sde, _grad_fun_mp, _grad_fun_vp,
                         mean_pts, vars_pts, sigma, theta, inv_sigma):
