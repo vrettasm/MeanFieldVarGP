@@ -545,6 +545,12 @@ class FreeEnergy(object):
         # Put all energy values together.
         Ecost = E0 + Esde + Eobs
 
+        # Check if we want the gradients to be returned.
+        if not output_gradients:
+            # Exit here.
+            return Ecost
+        # _end_if_
+
         # Put all gradients together.
         Ecost_dm = zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
         Ecost_ds = zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
@@ -582,13 +588,6 @@ class FreeEnergy(object):
         # the log-transformation and ensure positivity.
         # NOTE: This is element-wise multiplication !!!
         Ecost_ds *= vars_points
-
-        # Check if we want the gradients to be returned.
-        if not output_gradients:
-
-            # Exit here.
-            return Ecost
-        # _end_if_
 
         # Return the total (free) energy as the sum of the individual
         # components. NOTE: If we want to optimize the hyperparameter
@@ -681,7 +680,7 @@ class FreeEnergy(object):
         time_tf = time.perf_counter()
 
         # Print final duration in seconds.
-        print(f" Elapsed time: {(time_tf - time_t0):.2f} seconds.\n")
+        print(f"Elapsed time: {(time_tf - time_t0):.2f} seconds.\n")
 
         # Check numerically the gradients.
         if check_gradients:
