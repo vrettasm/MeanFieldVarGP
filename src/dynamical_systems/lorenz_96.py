@@ -5,7 +5,6 @@ from dill import load as dl_load
 from numpy import array as array_t
 from dynamical_systems.stochastic_process import StochasticProcess
 
-
 @njit
 def fwd_1(x: array_t) -> array_t:
     """
@@ -19,7 +18,6 @@ def fwd_1(x: array_t) -> array_t:
     # Shift forward by one.
     return np.roll(x, -1)
 # _end_def_
-
 
 @njit
 def bwd_1(x: array_t) -> array_t:
@@ -35,7 +33,6 @@ def bwd_1(x: array_t) -> array_t:
     return np.roll(x, +1)
 # _end_def_
 
-
 @njit
 def bwd_2(x: array_t) -> array_t:
     """
@@ -49,7 +46,6 @@ def bwd_2(x: array_t) -> array_t:
     # Shift backward by two.
     return np.roll(x, +2)
 # _end_def
-
 
 @njit
 def shift_vectors(x: array_t) -> array_t:
