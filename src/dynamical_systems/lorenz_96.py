@@ -69,7 +69,7 @@ def shift_vectors(x: array_t) -> array_t:
 # _end_def_
 
 @njit
-def shift_index(i: int, d: int):
+def circular_index(i: int, d: int):
     """
     Auxiliary function.
 
@@ -226,7 +226,7 @@ class Lorenz96(StochasticProcess):
         # _end_for_
 
         # Allocate array.
-        x = np.zeros((dim_t, self.dim_d))
+        x = np.zeros((dim_t, self.dim_d), dtype=float)
 
         # Start with the new point.
         x[0] = x0
@@ -296,7 +296,7 @@ class Lorenz96(StochasticProcess):
             for i in range(D):
 
                 # Get the circular indexes first.
-                idx = shift_index(i, D)
+                idx = circular_index(i, D)
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
@@ -346,7 +346,7 @@ class Lorenz96(StochasticProcess):
             for i in range(D):
 
                 # Get the circular indexes first.
-                idx = shift_index(i, D)
+                idx = circular_index(i, D)
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
@@ -396,7 +396,7 @@ class Lorenz96(StochasticProcess):
             for i in range(D):
 
                 # Get the circular indexes first.
-                idx = shift_index(i, D)
+                idx = circular_index(i, D)
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
