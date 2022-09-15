@@ -180,7 +180,6 @@ class FreeEnergy(object):
         :return: None.
         """
         self._tau0 = np.asarray(new_value, dtype=float)
-
     # _end_def_
 
     @property
