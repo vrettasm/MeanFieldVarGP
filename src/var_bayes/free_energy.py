@@ -490,14 +490,17 @@ class FreeEnergy(object):
         to the input mean and variance points).
         """
 
+        # Localize reshape function.
+        np_reshape = np.reshape
+
         # Separate the mean from the variance points.
-        mean_points = np.reshape(x[0:self.num_mp],
+        mean_points = np_reshape(x[0:self.num_mp],
                                  (self.dim_D, (3*self.num_M + 4)),
                                  order='C')
 
         # The variance points are in log-space to ensure positivity,
         # so we pass them through the exponential function first.
-        vars_points = np.reshape(np.exp(x[self.num_mp:]),
+        vars_points = np_reshape(np.exp(x[self.num_mp:]),
                                  (self.dim_D, (2*self.num_M + 3)),
                                  order='C')
 
@@ -518,9 +521,6 @@ class FreeEnergy(object):
         # Put all gradients together.
         Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
         Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
-
-        # Localize reshape function.
-        np_reshape = np.reshape
 
         # Copy the gradients of the first interval.
         Ecost_dm[:, 0:4] = np_reshape(dEsde_dm[0], (self.dim_D, 4))
@@ -580,18 +580,18 @@ class FreeEnergy(object):
 
         :param x0: initial set of variables to start the minimization.
 
-        :param maxiter: integer number of iterations in the minimization.
+        :param maxiter: (int) number of iterations in the minimization.
 
-        :param x_tol: float number of tolerance between two successive
-        solutions x_{k} and x_{k+1}.
+        :param x_tol: (float) tolerance between two successive solutions
+        x_{k} and x_{k+1}.
 
-        :param f_tol: float number of tolerance between two successive
-        function evaluations f(x_{k}) and f(x_{k+1}).
+        :param f_tol: (float) tolerance between two successive function
+        evaluations f(x_{k}) and f(x_{k+1}).
 
-        :param check_gradients: boolean flag to determine the checking
+        :param check_gradients: (boolean) flag to determine the checking
         of the gradients, before and after the minimization.
 
-        :param verbose: boolean flag to display information about the
+        :param verbose: (boolean) flag to display information about the
         convergence of the process.
 
         :return: the optimal solution found by SGC().
