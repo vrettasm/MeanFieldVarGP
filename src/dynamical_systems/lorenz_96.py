@@ -354,8 +354,19 @@ class Lorenz96(StochasticProcess):
                          *sp[idx, :].flatten(),
                          *sigma[idx], theta]
 
+                # Get the list of gradients.
+                _grad_dm = _func_dM(t, *param)
+
+                # Initialize temporary gradient with zeros.
+                _tmp_dm = np.zeros(D*4, dtype=float)
+
+                # Unroll the gradients.
+                for j, ix in enumerate(idx):
+                    _tmp_dm[4*ix: 4*(ix + 1)] = _grad_dm[4*j: 4*(j + 1)]
+                # _end_for_
+
                 # Add the function value to the list.
-                f_values.append(_func_dM(t, *param))
+                f_values.append(_tmp_dm)
             # _end_for_
 
             # Return the list.
@@ -404,8 +415,19 @@ class Lorenz96(StochasticProcess):
                          *sp[idx, :].flatten(),
                          *sigma[idx], theta]
 
+                # Get the list of gradients.
+                _grad_ds = _func_dS(t, *param)
+
+                # Initialize temporary gradient with zeros.
+                _tmp_ds = np.zeros(D*3, dtype=float)
+
+                # Unroll the gradients.
+                for j, ix in enumerate(idx):
+                    _tmp_ds[3*ix: 3*(ix + 1)] = _grad_ds[3*j: 3*(j + 1)]
+                # _end_for_
+
                 # Add the function value to the list.
-                f_values.append(_func_dS(t, *param))
+                f_values.append(_tmp_ds)
             # _end_for_
 
             # Return the list.
