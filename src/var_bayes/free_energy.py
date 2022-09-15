@@ -274,9 +274,8 @@ class FreeEnergy(object):
 
     # _end_def_
     @staticmethod
-    def single_interval(ti, tj, _drift_fun_sde, _grad_fun_mp,
-                        _grad_fun_vp, mean_pts, vars_pts, sigma,
-                        theta, inv_sigma):
+    def single_interval(ti, tj, _drift_fun_sde, _grad_fun_mp, _grad_fun_vp,
+                        mean_pts, vars_pts, sigma, theta, inv_sigma):
 
         # NOTE: This should not change for equally spaced
         # observations. This is here to ensure that small
@@ -288,17 +287,7 @@ class FreeEnergy(object):
         h = float(delta_t/3.0)
         c = float(delta_t/2.0)
 
-        # Separate variables for efficiency.
-        # nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
-        # nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
-
         # Total set of input parameters (pack).
-        # NOTE: if everything is done properly
-        # then the following two must be true:
-        #
-        #   a) np.isclose(ti + (3 * h), tj)
-        #   b) np.isclose(ti + (2 * c), tj)
-        #
         params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
                   ti, ti + c, ti + (2 * c),
                   *mean_pts.flatten(),
@@ -307,10 +296,8 @@ class FreeEnergy(object):
 
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
-        #
-        # Scale the (partial) energy with the inverse noise.
-        Esde = inv_sigma.dot(quad_vec(lambda t: _drift_fun_sde(t, *params),
-                                      ti, tj)[0])
+        Esde = quad_vec(lambda t: _drift_fun_sde(t, *params),
+                        ti, tj)[0]
 
         # Solve the integrals of dEsde(t)/dMp in [ti, tj].
         integral_dEn_dm = quad_vec(lambda t: _grad_fun_mp(t, *params),
@@ -322,24 +309,28 @@ class FreeEnergy(object):
         # Sanity check.
         if inv_sigma.size == 1:
 
-            # Remove singleton dimensions.
-            Esde = squeeze(Esde)
+            # Remove singleton dimension.
+            Esde = squeeze(inv_sigma*Esde)
 
             # This way we avoid errors in 1D systems.
-            dEsde_dm = 0.5 * squeeze(inv_sigma*integral_dEn_dm)
-            dEsde_ds = 0.5 * squeeze(inv_sigma*integral_dEn_ds)
+            dEsde_dm = inv_sigma*integral_dEn_dm
+            dEsde_ds = inv_sigma*integral_dEn_ds
 
         else:
 
+            # Scale everything with inverse noise.
+            Esde = inv_sigma.dot(Esde)
+
             # NOTE: the correct dimensions are (D x 4).
-            dEsde_dm = 0.5 * inv_sigma.dot(integral_dEn_dm)
+            dEsde_dm = inv_sigma.dot(integral_dEn_dm)
 
             # NOTE: the correct dimensions are (D x 3).
-            dEsde_ds = 0.5 * inv_sigma.dot(integral_dEn_ds)
+            dEsde_ds = inv_sigma.dot(integral_dEn_ds)
 
         # _end_if_
 
-        return Esde, dEsde_dm, dEsde_ds
+        # Include the scaling ([0.5]) here.
+        return 0.5 * Esde, 0.5 * dEsde_dm, 0.5 * dEsde_ds
     # _end_def_
 
     def E_sde(self, mean_pts, vars_pts):
@@ -410,7 +401,7 @@ class FreeEnergy(object):
         # Return the total energy (including the correct scaling).
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
-        return 0.5 * Esde, dEsde_dm, dEsde_ds
+        return Esde, dEsde_dm, dEsde_ds
     # _end_def_
 
     def E_obs(self, mean_pts, vars_pts):
