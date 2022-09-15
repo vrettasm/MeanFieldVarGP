@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from numpy import array as array_t
+from joblib import Parallel, delayed
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
 
@@ -270,6 +271,61 @@ class FreeEnergy(object):
         return 0.5 * E0, dE0_dm0, dE0_ds0
 
     # _end_def_
+    @staticmethod
+    def single_interval(n, ti, tj, _drift_fun_sde, _grad_fun_mp,
+                        _grad_fun_vp, mean_pts, vars_pts, sigma,
+                        theta, inv_sigma):
+
+        # NOTE: This should not change for equally spaced
+        # observations. This is here to ensure that small
+        # 'dt' deviations will not affect the algorithm.
+        delta_t = np.abs(tj-ti)
+
+        # Mid-point intervals (for the evaluation of the Esde function).
+        # NOTE: These should not change for equally spaced observations.
+        h = float(delta_t/3.0)
+        c = float(delta_t/2.0)
+
+        # Separate variables for efficiency.
+        nth_mean_points = mean_pts[:, (3 * n): (3 * n) + 4]
+        nth_vars_points = vars_pts[:, (2 * n): (2 * n) + 3]
+
+        # Total set of input parameters (pack).
+        # NOTE: if everything is done properly
+        # then the following two must be true:
+        #
+        #   a) np.isclose(ti + (3 * h), tj)
+        #   b) np.isclose(ti + (2 * c), tj)
+        #
+        params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
+                  ti, ti + c, ti + (2 * c),
+                  *nth_mean_points.flatten(),
+                  *nth_vars_points.flatten(),
+                  *sigma, *theta]
+
+        # We use the lambda functions here to fix all the
+        # additional input parameters except the time "t".
+        #
+        # Scale the (partial) energy with the inverse noise.
+        Esde = quad_vec(lambda t: _drift_fun_sde(t, *params),
+                         ti, tj)[0].dot(inv_sigma)
+
+        # Solve the integrals of dEsde(t)/dMp in [ti, tj].
+        integral_dEn_dm = quad_vec(lambda t: _grad_fun_mp(t, *params),
+                                   ti, tj)[0]
+
+        # Solve the integrals of dEsde(t)/dSp in [ti, tj].
+        integral_dEn_ds = quad_vec(lambda t: _grad_fun_vp(t, *params),
+                                   ti, tj)[0]
+
+        # NOTE: the correct dimensions are (D x 4).
+        dEsde_dm = 0.5 * inv_sigma.dot(integral_dEn_dm)
+
+        # NOTE: the correct dimensions are (D x 3).
+        dEsde_ds = 0.5 * inv_sigma.dot(integral_dEn_ds)
+
+        return Esde, dEsde_dm, dEsde_ds
+    # _end_def_
 
     def E_sde(self, mean_pts, vars_pts):
         """
@@ -282,6 +338,8 @@ class FreeEnergy(object):
         :return: Energy from the SDE prior process (scalar) and
         its gradients with respect to the mean & variance points.
         """
+
+        _single_interval = self.single_interval
 
         # Get the system dimensions once.
         dim_D = self.dim_D
@@ -297,7 +355,6 @@ class FreeEnergy(object):
         Esde = 0.0
 
         # Localize numpy functions.
-        np_abs = np.abs
         np_zeros = np.zeros
 
         # Initialize gradients arrays.
@@ -309,6 +366,21 @@ class FreeEnergy(object):
         # Inverted diagonal noise vector.
         inv_sigma = 1.0 / self.sigma
 
+        # Run the 'L' intervals in parallel.
+        results = Parallel(n_jobs=6)(
+            delayed(_single_interval)(n, obs_times[n], obs_times[n+1],
+                                      self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
+                                      mean_pts, vars_pts, self.sigma, self.theta, inv_sigma) for n in range(L)
+        )
+
+        # Extract all the result.
+        for i, result_i in enumerate(results, start=0):
+            Esde += result_i[0]
+            dEsde_dm[i] = result_i[1]
+            dEsde_ds[i] = result_i[2]
+        # _end_for_
+
+        '''
         # Calculate energy from all 'L' time intervals.
         for n in range(L):
 
@@ -364,6 +436,7 @@ class FreeEnergy(object):
             dEsde_ds[n] = 0.5 * inv_sigma.dot(integral_dEn_ds)
 
         # _end_for_
+        '''
 
         # Sanity check.
         if not np.isfinite(Esde):
