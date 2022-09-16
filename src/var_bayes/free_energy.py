@@ -21,7 +21,7 @@ class FreeEnergy(object):
 
     def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
-                 h_operator: array_t = None):
+                 h_operator: list = None):
         """
         Default constructor of the FreeEnergy class.
 
@@ -38,6 +38,8 @@ class FreeEnergy(object):
         :param obs_noise: observation noise variance.
 
         :param h_operator: observation operator (default = None).
+        This is a list that defines which dimensions are observed and which are not.
+        By default, all states are assumed to be observed.
         """
 
         # (WRAPPER FUNCTION): SDE energy function.
@@ -77,19 +79,34 @@ class FreeEnergy(object):
         self.obs_noise = np.asarray(obs_noise, dtype=float)
         self.obs_values = np.asarray(obs_values, dtype=float)
 
+        # Infer the system dimensions.
+        self.dim_D = self.sigma.size
+
         # Check if an observation operator is provided.
         if h_operator is None:
 
-            # In the default case we simply set it to '1'.
-            self.h_operator = np.array(1.0)
+            # Make a list with dim_D "True" values.
+            self.h_operator = self.dim_D * [True]
         else:
 
-            # Here we copy the input array.
-            self.h_operator = np.asarray(h_operator, dtype=float)
-        # _end_if_
+            # Sanity check.
+            if len(h_operator) != self.dim_D:
+                raise RuntimeError(f" {self.__class__.__name__}:"
+                                   f" Observation operator mismatch {len(h_operator)} != {self.dim_D}")
+            # _end_if_
 
-        # Infer the system dimensions.
-        self.dim_D = self.sigma.size
+            # Sanity check.
+            if all(isinstance(item, bool) for item in h_operator):
+
+                # Here we copy the obs list.
+                self.h_operator = h_operator
+
+            else:
+                raise ValueError(f" {self.__class__.__name__}:"
+                                 f" Observation operator contains non-boolean!")
+            # _end_if_
+
+        # _end_if_
 
         # Infer the observations dimensions.
         if self.obs_values.ndim in (0, 1):
@@ -436,19 +453,19 @@ class FreeEnergy(object):
         # _end_if_
 
         # Auxiliary quantity: (Y - H*m).
-        Y_minus_Hm = self.obs_values.T - self.h_operator.dot(mean_pts)
+        Y_minus_Hm = self.obs_values.T - mean_pts[self.h_operator, :]
 
         # Auxiliary quantity (for the E_obs).
         Z = Qi.dot(Y_minus_Hm)
 
         # Auxiliary quantity (for the E_obs).
-        W = Ri.diagonal().T.dot(self.h_operator.dot(vars_pts))
+        W = Ri.diagonal().dot(vars_pts[self.h_operator, :])
 
         # These are the derivatives of E_{obs} w.r.t. the mean/var points.
-        kappa_1 = -self.h_operator.T.dot(Ri).dot(Y_minus_Hm).T
+        kappa_1 = -Ri.dot(Y_minus_Hm).T
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
-        kappa_2 = 0.5 * np.diag(self.h_operator.T.dot(Ri).dot(self.h_operator))
+        kappa_2 = 0.5 * Ri.diagonal()
 
         # Initialize observations' energy.
         Eobs = 0.0
@@ -473,10 +490,10 @@ class FreeEnergy(object):
             Eobs += Zk.T.dot(Zk) + W[k]
 
             # Gradient of E_{obs} w.r.t. m(tk).
-            dEobs_dm[:, k] = kappa_1[k]
+            dEobs_dm[self.h_operator, k] = kappa_1[k]
 
             # Gradient of E_{obs} w.r.t. S(tk).
-            dEobs_ds[:, k] = kappa_2
+            dEobs_ds[self.h_operator, k] = kappa_2
         # _end_for_
 
         # Logarithm of 2*pi.
