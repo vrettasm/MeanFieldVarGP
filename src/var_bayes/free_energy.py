@@ -395,7 +395,7 @@ class FreeEnergy(object):
         back_end = "loky" if dim_D > 5 else "threading"
 
         # Run the 'L' intervals in parallel.
-        results = Parallel(n_jobs=6, backend=back_end)(
+        results = Parallel(n_jobs=4, backend=back_end)(
             delayed(_single_interval)(obs_times[n], obs_times[n+1],
                                       self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
                                       mean_pts[:, (3 * n): (3 * n) + 4],
@@ -681,9 +681,9 @@ class FreeEnergy(object):
 
         # Ensure optimization variables have the correct types.
         # Put lower limits to them to avoid invalid entries.
-        maxiter = np.maximum(int(maxiter), 100)
-        x_tol = np.maximum(float(x_tol), 0.001)
-        f_tol = np.maximum(float(f_tol), 0.001)
+        maxiter = np.maximum(int(maxiter), 10)
+        x_tol = np.maximum(float(x_tol), 1.0e-20)
+        f_tol = np.maximum(float(f_tol), 1.0e-20)
 
         # Setup SCG options.
         options = {"max_it": maxiter, "x_tol": x_tol, "f_tol": f_tol,
