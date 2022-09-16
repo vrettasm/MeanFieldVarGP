@@ -96,7 +96,7 @@ class FreeEnergy(object):
             # _end_if_
 
             # Sanity check.
-            if all(isinstance(item, bool) for item in h_operator):
+            if all(isinstance(item, np.bool_) for item in h_operator):
 
                 # Here we copy the obs list.
                 self.h_operator = h_operator
