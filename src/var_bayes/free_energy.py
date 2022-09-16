@@ -461,7 +461,7 @@ class FreeEnergy(object):
         # Auxiliary quantity (for the E_obs).
         W = Ri.diagonal().dot(vars_pts[self.h_operator, :])
 
-        # These are the derivatives of E_{obs} w.r.t. the mean/var points.
+        # These are the derivatives of E_{obs} w.r.t. the mean points.
         kappa_1 = -Ri.dot(Y_minus_Hm).T
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
