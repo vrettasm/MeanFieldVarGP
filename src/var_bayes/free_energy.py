@@ -291,7 +291,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @staticmethod
-    def single_interval(ti, tj, _drift_fun_sde, _grad_fun_mp, _grad_fun_vp,
+    def single_interval(n_th, ti, tj, _drift_fun_sde, _grad_fun_mp, _grad_fun_vp,
                         mean_pts, vars_pts, sigma, theta, inv_sigma):
 
         # NOTE: This should not change for equally spaced
@@ -349,8 +349,9 @@ class FreeEnergy(object):
 
         # _end_if_
 
-        # Include the scaling ([0.5]) here.
-        return 0.5 * Esde, 0.5 * dEsde_dm, 0.5 * dEsde_ds
+        # Include the n-th interval here to guarantee the order
+        # of the sub-intervals.
+        return n_th, 0.5 * Esde, 0.5 * dEsde_dm, 0.5 * dEsde_ds
     # _end_def_
 
     def E_sde(self, mean_pts, vars_pts):
@@ -390,28 +391,34 @@ class FreeEnergy(object):
         # Inverted diagonal noise vector.
         inv_sigma = np.atleast_1d(1.0 / self.sigma)
 
-        # NOTE: For small systems (e.g. D < 5) it is
+        # NOTE: For small systems (e.g. D < 10) it is
         # preferred to use as backend "threading".
-        back_end = "loky" if dim_D > 5 else "threading"
+        back_end = "loky" if dim_D > 10 else "threading"
 
         # Run the 'L' intervals in parallel.
         results = Parallel(n_jobs=4, backend=back_end)(
-            delayed(_single_interval)(obs_times[n], obs_times[n+1],
+
+            delayed(_single_interval)(n, obs_times[n], obs_times[n+1],
                                       self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
                                       mean_pts[:, (3 * n): (3 * n) + 4],
                                       vars_pts[:, (2 * n): (2 * n) + 3],
-                                      self.sigma, self.theta, inv_sigma) for n in list(range(L))
+                                      self.sigma, self.theta, inv_sigma) for n in range(L)
         )
 
         # Extract all the result from the parallel run.
-        for i, result_i in enumerate(results, start=0):
+        # NOTE: The order of the results matters in the
+        # computation of the gradients!
+        for result_ in results:
+        
+            # This is the sub-interval.
+            i = result_[0]
 
             # Accumulate the Esde here.
-            Esde += result_i[0]
+            Esde += result_[1]
 
             # The gradients will be accumulated in the E_cost.
-            dEsde_dm[i] = result_i[1]
-            dEsde_ds[i] = result_i[2]
+            dEsde_dm[i] = result_[2]
+            dEsde_ds[i] = result_[3]
         # _end_for_
 
         # Sanity check.
