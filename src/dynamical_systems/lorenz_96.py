@@ -5,83 +5,24 @@ from dill import load as dl_load
 from numpy import array as array_t
 from dynamical_systems.stochastic_process import StochasticProcess
 
-@njit
-def fwd_1(x: array_t) -> array_t:
-    """
-    Auxiliary function.
-
-    :param x: input (state) vector.
-
-    :return: The input vector 'x' shifted forward by one position.
-    """
-
-    # Shift forward by one.
-    return np.roll(x, -1)
-# _end_def_
 
 @njit
-def bwd_1(x: array_t) -> array_t:
-    """
-    Auxiliary function.
-
-    :param x: input (state) vector.
-
-    :return: The input vector 'x' shifted backward by one position.
-    """
-
-    # Shift backward by one.
-    return np.roll(x, +1)
-# _end_def_
-
-@njit
-def bwd_2(x: array_t) -> array_t:
-    """
-    Auxiliary function.
-
-    :param x: input (state) vector.
-
-    :return: The input vector 'x' shifted backward by two positions.
-    """
-
-    # Shift backward by two.
-    return np.roll(x, +2)
-# _end_def
-
-@njit
-def shift_vectors(x: array_t) -> array_t:
-    """
-    Auxiliary function.
-
-    :param x: input (state) vector.
-
-    :return: The input vector 'x' shifted by:
-        1) forward  by one,
-        2) backward by one,
-        3) backward by two.
-    """
-
-    # Return ALL the shifted vectors: (-1, +1, +2).
-    return np.roll(x, -1), np.roll(x, +1), np.roll(x, +2)
-# _end_def_
-
-@njit
-def circular_index(i: int, d: int) -> list:
+def circular_index(i: int, D: int) -> list:
     """
     Auxiliary function.
 
     :param i: index (int) in circular vector.
 
-    :param d: total (int) vector dimensions.
+    :param D: total (int) vector dimensions.
 
     :return: the indexes [i, i+1, i-1, i-2]
              around a circular set of values
              from 0 to D-1.
     """
-
     return [i,
-            np.mod(i + 1, d),
-            np.mod(i - 1, d),
-            np.mod(i - 2, d)]
+            np.mod(i + 1, D),
+            np.mod(i - 1, D),
+            np.mod(i - 2, D)]
 # _end_def_
 
 @njit
@@ -98,8 +39,10 @@ def _l96(x: array_t, u: array_t) -> array_t:
     :return: One step ahead in the equation.
     """
 
-    # Get the shifted values.
-    fwd_1x, bwd_1x, bwd_2x = shift_vectors(x)
+    # Get the shifted vectors.
+    fwd_1x = np.roll(x, -1)
+    bwd_1x = np.roll(x, +1)
+    bwd_2x = np.roll(x, +2)
 
     # Return one step ahead differential equation.
     return (fwd_1x - bwd_2x) * bwd_1x - x + u
