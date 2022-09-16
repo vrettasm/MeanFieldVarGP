@@ -143,6 +143,12 @@ class Lorenz63(StochasticProcess):
             x0 = x0 + _l63(x0, self._theta) * delta_t
         # _end_for_
 
+        # Sanity check.
+        if np.any(np.isnan(x0)):
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Invalid initial point: {x0}.")
+        # _end_if_
+
         # Allocate the array.
         x = np.zeros((dim_t, 3))
 
@@ -161,7 +167,19 @@ class Lorenz63(StochasticProcess):
 
         # Create the path by solving the SDE iteratively.
         for t in range(1, dim_t):
-            x[t] = x[t-1] + _l63(x[t-1], self._theta) * dt + ek.T[t]
+
+            # Get the one step before 't-1'.
+            x_p = _l63(x[t - 1], self._theta)
+
+            # Sanity check.
+            if np.any(np.isnan(x_p)):
+                raise RuntimeError(f" {self.__class__.__name__}:"
+                                   f" Invalid state vector at t={t}."
+                                   f" Reduce the value of dt={dt} and try again.")
+            # _end_if_
+
+            # Update the current state.
+            x[t] = x[t - 1] + x_p * dt + ek.T[t]
         # _end_for_
 
         # Store the sample path (trajectory).

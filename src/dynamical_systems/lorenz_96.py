@@ -26,7 +26,7 @@ def circular_index(i: int, D: int) -> list:
 # _end_def_
 
 @njit
-def _l96(x: array_t, u: array_t) -> array_t:
+def _l96(x: array_t, u: float) -> array_t:
     """
     Auxiliary Lorenz 96 model function.
 
@@ -156,13 +156,22 @@ class Lorenz96(StochasticProcess):
         # Initial conditions time step.
         delta_t = 1.0E-3
 
-        # Perturb the middle of the vector by "+dt".
-        x0[int(self.dim_d / 2.0)] += delta_t
+        # Perturb the middle of the vector
+        # by a small value.
+        x0[int(self.dim_d / 2.0)] += 0.01
 
-        # BURN IN:
-        for t in range(5000):
+        # BURN IN: The higher the number of
+        # dimensions the more iterations to
+        # burn in.
+        for t in range(125 * self.dim_d):
             x0 = x0 + _l96(x0, self.theta) * delta_t
         # _end_for_
+
+        # Sanity check.
+        if np.any(np.isnan(x0)):
+            raise RuntimeError(f" {self.__class__.__name__}:"
+                               f" Invalid initial point: {x0}.")
+        # _end_if_
 
         # Allocate array.
         x = np.zeros((dim_t, self.dim_d), dtype=float)
@@ -182,7 +191,19 @@ class Lorenz96(StochasticProcess):
 
         # Create the path by solving the SDE iteratively.
         for t in range(1, dim_t):
-            x[t] = x[t - 1] + _l96(x[t - 1], self.theta) * dt + ek.T[t]
+
+            # Get the one step before 't-1'.
+            x_p = _l96(x[t - 1], self.theta)
+
+            # Sanity check.
+            if np.any(np.isnan(x_p)):
+                raise RuntimeError(f" {self.__class__.__name__}:"
+                                   f" Invalid state vector at t={t}."
+                                   f" Reduce the value of dt={dt} and try again.")
+            # _end_if_
+
+            # Update the current state.
+            x[t] = x[t - 1] + x_p * dt + ek.T[t]
         # _end_for_
 
         # Store the sample path (trajectory).
