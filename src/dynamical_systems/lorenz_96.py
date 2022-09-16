@@ -51,7 +51,7 @@ def _l96(x: array_t, u: array_t) -> array_t:
 
 class Lorenz96(StochasticProcess):
     """
-    Class that model the Lorenz 40D (1996) dynamical system.
+    Class that model the Lorenz (1996) dynamical system.
 
     https://en.wikipedia.org/wiki/Lorenz_96_model
     """
@@ -132,8 +132,8 @@ class Lorenz96(StochasticProcess):
 
     def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
         """
-        Generates a realizations of the Lorenz96 (40D)
-        dynamical system, within a specified time-window.
+        Generates a realizations of the Lorenz96 dynamical system within
+        a specified time-window [t0, tf].
 
         :param t0: (float) initial time point.
 
