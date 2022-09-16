@@ -373,13 +373,17 @@ class FreeEnergy(object):
         # Inverted diagonal noise vector.
         inv_sigma = np.atleast_1d(1.0 / self.sigma)
 
+        # NOTE: For small systems (e.g. D < 5) it is
+        # preferred to use as backend "threading".
+        back_end = "loky" if dim_D > 5 else "threading"
+
         # Run the 'L' intervals in parallel.
-        results = Parallel(n_jobs=6, backend="loky")(
+        results = Parallel(n_jobs=6, backend=back_end)(
             delayed(_single_interval)(obs_times[n], obs_times[n+1],
                                       self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
                                       mean_pts[:, (3 * n): (3 * n) + 4],
                                       vars_pts[:, (2 * n): (2 * n) + 3],
-                                      self.sigma, self.theta, inv_sigma) for n in range(L)
+                                      self.sigma, self.theta, inv_sigma) for n in list(range(L))
         )
 
         # Extract all the result from the parallel run.
