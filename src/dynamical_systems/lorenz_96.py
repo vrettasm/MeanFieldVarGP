@@ -26,7 +26,7 @@ def circular_index(i: int, D: int) -> list:
 # _end_def_
 
 @njit
-def _l96(x: array_t, u: float) -> array_t:
+def _l96(x: array_t, u: array_t) -> array_t:
     """
     Auxiliary Lorenz 96 model function.
 
