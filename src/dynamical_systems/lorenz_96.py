@@ -3,6 +3,8 @@ from numba import njit
 from pathlib import Path
 from dill import load as dl_load
 from numpy import array as array_t
+from numpy import zeros as _zeros
+from numpy import reshape as _reshape
 from dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -246,11 +248,6 @@ class Lorenz96(StochasticProcess):
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
 
-        # Localize numpy functions.
-        # This might improve performance.
-        _zeros = np.zeros
-        _reshape = np.reshape
-
         def _l96_En(t, *args):
 
             # State vector dimensions.
@@ -263,11 +260,11 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = _reshape(args[i0: i1], (D, 4))
+            mp = _reshape(args[i0: i1], (D, 4), order='C')
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = _reshape(args[i1: i2], (D, 3))
+            sp = _reshape(args[i1: i2], (D, 3), order='C')
 
             # Extract the diffusion noise parameters.
             sigma = array_t(args[i2: i2 + D])
@@ -316,11 +313,11 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = _reshape(args[i0: i1], (D, 4))
+            mp = _reshape(args[i0: i1], (D, 4), order='C')
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = _reshape(args[i1: i2], (D, 3))
+            sp = _reshape(args[i1: i2], (D, 3), order='C')
 
             # Extract the diffusion noise parameters.
             sigma = array_t(args[i2: i2 + D])
@@ -380,11 +377,11 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = _reshape(args[i0: i1], (D, 4))
+            mp = _reshape(args[i0: i1], (D, 4), order='C')
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = _reshape(args[i1: i2], (D, 3))
+            sp = _reshape(args[i1: i2], (D, 3), order='C')
 
             # Extract the diffusion noise parameters.
             sigma = array_t(args[i2: i2 + D])
