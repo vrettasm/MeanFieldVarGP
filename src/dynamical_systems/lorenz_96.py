@@ -286,8 +286,8 @@ class Lorenz96(StochasticProcess):
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
-                         *mp[idx, :].flatten(),
-                         *sp[idx, :].flatten(),
+                         *mp[idx, :].ravel(order='C'),
+                         *sp[idx, :].ravel(order='C'),
                          *sigma[idx], theta]
 
                 # Add the function value to the list.
@@ -339,8 +339,8 @@ class Lorenz96(StochasticProcess):
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
-                         *mp[idx, :].flatten(),
-                         *sp[idx, :].flatten(),
+                         *mp[idx, :].ravel(order='C'),
+                         *sp[idx, :].ravel(order='C'),
                          *sigma[idx], theta]
 
                 # Get the list of gradients.
@@ -403,8 +403,8 @@ class Lorenz96(StochasticProcess):
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
-                         *mp[idx, :].flatten(),
-                         *sp[idx, :].flatten(),
+                         *mp[idx, :].ravel(order='C'),
+                         *sp[idx, :].ravel(order='C'),
                          *sigma[idx], theta]
 
                 # Get the list of gradients.

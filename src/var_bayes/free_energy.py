@@ -308,8 +308,8 @@ class FreeEnergy(object):
         # Total set of input parameters (pack).
         params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
                   ti, ti + c, ti + (2 * c),
-                  *mean_pts.flatten(),
-                  *vars_pts.flatten(),
+                  *mean_pts.ravel(order='C'),
+                  *vars_pts.ravel(order='C'),
                   *sigma, *theta]
 
         # We use the lambda functions here to fix all the
@@ -619,8 +619,8 @@ class FreeEnergy(object):
         # components. NOTE: If we want to optimize the hyperparameter
         # we should add another term, e.g. E_param, and include it in
         # the total sum of energy values.
-        return Ecost, np.concatenate((Ecost_dm.flatten(order='C'),
-                                      Ecost_ds.flatten(order='C')), axis=0)
+        return Ecost, np.concatenate((Ecost_dm.ravel(order='C'),
+                                      Ecost_ds.ravel(order='C')), axis=0)
     # _end_def_
 
     def find_minimum(self, x0, maxiter: int = 100, x_tol: float = 1.0e-5,
