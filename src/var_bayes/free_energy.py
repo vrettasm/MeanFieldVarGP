@@ -2,6 +2,7 @@ import time
 import numpy as np
 from numpy import zeros
 from numpy import array as array_t
+from numpy import reshape as reshape
 from numpy import squeeze as squeeze
 from joblib import Parallel, delayed
 from scipy.integrate import quad_vec
@@ -17,11 +18,11 @@ class FreeEnergy(object):
     # Declare all the class variables here.
     __slots__ = ("drift_fun_sde", "grad_fun_mp", "grad_fun_vp", "_mu0", "_tau0",
                  "theta", "sigma", "tk", "obs_times", "obs_noise", "obs_values",
-                 "h_operator", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks")
+                 "obs_mask", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks")
 
     def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
-                 h_operator: list = None):
+                 obs_mask: list = None):
         """
         Default constructor of the FreeEnergy class.
 
@@ -37,9 +38,9 @@ class FreeEnergy(object):
 
         :param obs_noise: observation noise variance.
 
-        :param h_operator: observation operator (default = None).
-        This is a list that defines which dimensions are observed and which are not.
-        By default, all states are assumed to be observed.
+        :param obs_mask: observation mask (default = None).
+        This is a list that defines which dimensions are observed and
+        which are not. By default, all states are assumed to be observed.
         """
 
         # (WRAPPER FUNCTION): SDE energy function.
@@ -83,23 +84,23 @@ class FreeEnergy(object):
         self.dim_D = self.sigma.size
 
         # Check if an observation operator is provided.
-        if h_operator is None:
+        if obs_mask is None:
 
             # Make a list with dim_D "True" values.
-            self.h_operator = self.dim_D * [True]
+            self.obs_mask = self.dim_D * [True]
         else:
 
             # Sanity check.
-            if len(h_operator) != self.dim_D:
+            if len(obs_mask) != self.dim_D:
                 raise RuntimeError(f" {self.__class__.__name__}:"
-                                   f" Observation operator mismatch {len(h_operator)} != {self.dim_D}")
+                                   f" Observation operator mismatch {len(obs_mask)} != {self.dim_D}")
             # _end_if_
 
             # Sanity check.
-            if all(isinstance(item, np.bool_) for item in h_operator):
+            if all(isinstance(item, bool) for item in obs_mask):
 
-                # Here we copy the obs list.
-                self.h_operator = h_operator
+                # Here we copy the list.
+                self.obs_mask = obs_mask
 
             else:
                 raise ValueError(f" {self.__class__.__name__}:"
@@ -460,13 +461,13 @@ class FreeEnergy(object):
         # _end_if_
 
         # Auxiliary quantity: (Y - H*m).
-        Y_minus_Hm = self.obs_values.T - mean_pts[self.h_operator, :]
+        Y_minus_Hm = self.obs_values.T - mean_pts[self.obs_mask, :]
 
         # Auxiliary quantity (for the E_obs).
         Z = Qi.dot(Y_minus_Hm)
 
         # Auxiliary quantity (for the E_obs).
-        W = Ri.diagonal().dot(vars_pts[self.h_operator, :])
+        W = Ri.diagonal().dot(vars_pts[self.obs_mask, :])
 
         # These are the derivatives of E_{obs} w.r.t. the mean points.
         kappa_1 = -Ri.dot(Y_minus_Hm).T
@@ -497,10 +498,10 @@ class FreeEnergy(object):
             Eobs += Zk.T.dot(Zk) + W[k]
 
             # Gradient of E_{obs} w.r.t. m(tk).
-            dEobs_dm[self.h_operator, k] = kappa_1[k]
+            dEobs_dm[self.obs_mask, k] = kappa_1[k]
 
             # Gradient of E_{obs} w.r.t. S(tk).
-            dEobs_ds[self.h_operator, k] = kappa_2
+            dEobs_ds[self.obs_mask, k] = kappa_2
         # _end_for_
 
         # Logarithm of 2*pi.
@@ -546,19 +547,16 @@ class FreeEnergy(object):
         to the input mean and variance points).
         """
 
-        # Localize reshape function.
-        np_reshape = np.reshape
-
         # Separate the mean from the variance points.
-        mean_points = np_reshape(x[0:self.num_mp],
-                                 (self.dim_D, (3*self.num_M + 4)),
-                                 order='C')
+        mean_points = reshape(x[0:self.num_mp],
+                              (self.dim_D, (3*self.num_M + 4)),
+                              order='C')
 
         # The variance points are in log-space to ensure positivity,
         # so we pass them through the exponential function first.
-        vars_points = np_reshape(np.exp(x[self.num_mp:]),
-                                 (self.dim_D, (2*self.num_M + 3)),
-                                 order='C')
+        vars_points = reshape(np.exp(x[self.num_mp:]),
+                              (self.dim_D, (2*self.num_M + 3)),
+                              order='C')
 
         # Energy (and gradients) from the initial moment (t=0).
         E0, dE0_dm0, dE0_ds0 = self.E_kl0(mean_points[:, 0],
@@ -585,15 +583,15 @@ class FreeEnergy(object):
         Ecost_ds = zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
         # Copy the gradients of the first interval.
-        Ecost_dm[:, 0:4] = np_reshape(dEsde_dm[0], (self.dim_D, 4))
-        Ecost_ds[:, 0:3] = np_reshape(dEsde_ds[0], (self.dim_D, 3))
+        Ecost_dm[:, 0:4] = reshape(dEsde_dm[0], (self.dim_D, 4), order='C')
+        Ecost_ds[:, 0:3] = reshape(dEsde_ds[0], (self.dim_D, 3), order='C')
 
         # Iterate over the rest (L-1) intervals.
         for n in range(1, self.obs_times.size - 1):
 
             # Reshape the n-th gradients.
-            temp_dm = np_reshape(dEsde_dm[n], (self.dim_D, 4))
-            temp_ds = np_reshape(dEsde_ds[n], (self.dim_D, 3))
+            temp_dm = reshape(dEsde_dm[n], (self.dim_D, 4), order='C')
+            temp_ds = reshape(dEsde_ds[n], (self.dim_D, 3), order='C')
 
             # Add the link between intervals (at observation times).
             Ecost_dm[:, (3 * n)] += temp_dm[:, 0]
