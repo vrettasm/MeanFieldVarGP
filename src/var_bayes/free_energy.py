@@ -431,7 +431,9 @@ class FreeEnergy(object):
         # Return the total energy (including the correct scaling).
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
-        return Esde, dEsde_dm, dEsde_ds
+        return Esde,\
+               reshape(dEsde_dm, (L, dim_D, 4), order='C'),\
+               reshape(dEsde_ds, (L, dim_D, 3), order='C')
     # _end_def_
 
     def E_obs(self, mean_pts, vars_pts):
@@ -583,23 +585,20 @@ class FreeEnergy(object):
         Ecost_ds = zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
         # Copy the gradients of the first interval.
-        Ecost_dm[:, 0:4] = reshape(dEsde_dm[0], (self.dim_D, 4), order='C')
-        Ecost_ds[:, 0:3] = reshape(dEsde_ds[0], (self.dim_D, 3), order='C')
+        Ecost_dm[:, 0:4] = dEsde_dm[0]
+        Ecost_ds[:, 0:3] = dEsde_ds[0]
 
         # Iterate over the rest (L-1) intervals.
         for n in range(1, self.obs_times.size - 1):
 
-            # Reshape the n-th gradients.
-            temp_dm = reshape(dEsde_dm[n], (self.dim_D, 4), order='C')
-            temp_ds = reshape(dEsde_ds[n], (self.dim_D, 3), order='C')
-
-            # Add the link between intervals (at observation times).
-            Ecost_dm[:, (3 * n)] += temp_dm[:, 0]
-            Ecost_ds[:, (2 * n)] += temp_ds[:, 0]
+            # Add the link between intervals, at
+            # observation times.
+            Ecost_dm[:, (3 * n)] += dEsde_dm[n][:, 0]
+            Ecost_ds[:, (2 * n)] += dEsde_ds[n][:, 0]
 
             # Copy the rest of the gradients.
-            Ecost_dm[:, (3 * n+1): (3 * n) + 4] = temp_dm[:, 1:]
-            Ecost_ds[:, (2 * n+1): (2 * n) + 3] = temp_ds[:, 1:]
+            Ecost_dm[:, (3 * n+1): (3 * n) + 4] = dEsde_dm[n][:, 1:]
+            Ecost_ds[:, (2 * n+1): (2 * n) + 3] = dEsde_ds[n][:, 1:]
 
         # _end_for_
 
