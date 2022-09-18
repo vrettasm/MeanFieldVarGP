@@ -253,10 +253,11 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
-            # The first seven variables
-            # are the fixed time-points.
-            # So we have to exclude them.
+            # The first seven variables are the fixed time-points.
             i0 = 7
+
+            # Time related variables.
+            time_vars = args[0:i0]
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
@@ -288,7 +289,7 @@ class Lorenz96(StochasticProcess):
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
-                param = [*args[0:i0],
+                param = [*time_vars,
                          *mp[idx, :].ravel(order='C'),
                          *sp[idx, :].ravel(order='C'),
                          *sigma[idx], theta]
@@ -309,10 +310,11 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
-            # The first seven variables
-            # are the fixed time-points.
-            # So we have to exclude them.
+            # The first seven variables are the fixed time-points.
             i0 = 7
+
+            # Time related variables.
+            time_vars = args[0:i0]
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
@@ -344,7 +346,7 @@ class Lorenz96(StochasticProcess):
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
-                param = [*args[0:i0],
+                param = [*time_vars,
                          *mp[idx, :].ravel(order='C'),
                          *sp[idx, :].ravel(order='C'),
                          *sigma[idx], theta]
@@ -376,10 +378,11 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
-            # The first seven variables
-            # are the fixed time-points.
-            # So we have to exclude them.
+            # The first seven variables are the fixed time-points.
             i0 = 7
+
+            # Time related variables.
+            time_vars = args[0:i0]
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
@@ -411,7 +414,7 @@ class Lorenz96(StochasticProcess):
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
-                param = [*args[0:i0],
+                param = [*time_vars,
                          *mp[idx, :].ravel(order='C'),
                          *sp[idx, :].ravel(order='C'),
                          *sigma[idx], theta]
