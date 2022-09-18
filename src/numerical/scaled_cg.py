@@ -1,5 +1,6 @@
 import numpy as np
 from numba import njit
+from time import perf_counter
 from numpy import array as array_t
 
 
@@ -181,6 +182,9 @@ class SCG(object):
         # Get the machine precision constant.
         eps_float = np.finfo(float).eps
 
+        # Start the timer.
+        time_t0 = perf_counter()
+
         # Main optimization loop.
         for j in range(self.nit):
 
@@ -268,9 +272,19 @@ class SCG(object):
             self.stats["fx"][j] = f_now
             self.stats["dfx"][j] = total_grad
 
-            # Used in debugging mode.
+            # Used in verbose/display mode.
             if self.display and (np.mod(j, 50) == 0):
-                print(f"It= {j:>5}: F(x)= {f_now:.3E} -/- Sum(Gradients)= {total_grad:.3E}")
+
+                # Timer snapshot after 'j' iterations.
+                time_tj = perf_counter()
+
+                # Print the current info.
+                print(f"It= {j:>5}: F(x)= {f_now:.3E} -/- "
+                      f"Sum(Gradients)= {total_grad:.3E} -/- "
+                      f"Delta(Elapsed)= {time_tj-time_t0:.2f} sec.")
+
+                # Assign the current time to 't0'.
+                time_t0 = time_tj
             # _end_if_
 
             # Check for success.
