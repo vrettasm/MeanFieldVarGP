@@ -278,11 +278,14 @@ class Lorenz96(StochasticProcess):
             # Localize append method.
             f_values_append = f_values.append
 
+            # Get ALL the circular indexes first.
+            circ_idx = array_t(circular_index(np.arange(D), D))
+
             # Iterate through all the system dimensions.
             for i in range(D):
 
-                # Get the circular indexes first.
-                idx = circular_index(i, D)
+                # Get the indexes for the i-th dimension.
+                idx = circ_idx[:, i]
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
@@ -331,11 +334,14 @@ class Lorenz96(StochasticProcess):
             # Localize append method.
             f_values_append = f_values.append
 
+            # Get ALL the circular indexes first.
+            circ_idx = array_t(circular_index(np.arange(D), D))
+
             # Iterate through all the system dimensions.
             for i in range(D):
 
-                # Get the circular indexes first.
-                idx = circular_index(i, D)
+                # Get the indexes for the i-th dimension.
+                idx = circ_idx[:, i]
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
@@ -350,8 +356,8 @@ class Lorenz96(StochasticProcess):
                 _tmp_dm = _zeros(D*4, dtype=float)
 
                 # Unroll the gradients.
-                for j, ix in enumerate(idx):
-                    _tmp_dm[4*ix: 4*(ix + 1)] = _grad_dm[4*j: 4*(j + 1)]
+                for j, _ix in enumerate(idx):
+                    _tmp_dm[4*_ix: 4*(_ix + 1)] = _grad_dm[4*j: 4*(j + 1)]
                 # _end_for_
 
                 # Add the gradient array.
@@ -395,11 +401,14 @@ class Lorenz96(StochasticProcess):
             # Localize append method.
             f_values_append = f_values.append
 
+            # Get ALL the circular indexes first.
+            circ_idx = array_t(circular_index(np.arange(D), D))
+
             # Iterate through all the system dimensions.
             for i in range(D):
 
-                # Get the circular indexes first.
-                idx = circular_index(i, D)
+                # Get the indexes for the i-th dimension.
+                idx = circ_idx[:, i]
 
                 # Pack the input parameters.
                 param = [*args[0:i0],
@@ -414,8 +423,8 @@ class Lorenz96(StochasticProcess):
                 _tmp_ds = _zeros(D*3, dtype=float)
 
                 # Unroll the gradients.
-                for j, ix in enumerate(idx):
-                    _tmp_ds[3*ix: 3*(ix + 1)] = _grad_ds[3*j: 3*(j + 1)]
+                for j, _ix in enumerate(idx):
+                    _tmp_ds[3*_ix: 3*(_ix + 1)] = _grad_ds[3*j: 3*(j + 1)]
                 # _end_for_
 
                 # Add the gradient array.
