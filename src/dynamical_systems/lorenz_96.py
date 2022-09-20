@@ -452,9 +452,6 @@ class Lorenz96(StochasticProcess):
         # Initial assignment of functions.
         _func_En, _func_dM, _func_dS = None, None, None
 
-        # Counter of the loaded equations.
-        eqn_counter = 0
-
         # Get the current directory of the file.
         current_dir = Path(__file__).resolve().parent
 
@@ -464,9 +461,6 @@ class Lorenz96(StochasticProcess):
             # Append the energy function.
             _func_En = njit(dl_load(sym_Eqn))
 
-            # Increase by one.
-            eqn_counter += 1
-
         # _end_with_
 
         # Load the mean-gradient file.
@@ -474,9 +468,6 @@ class Lorenz96(StochasticProcess):
 
             # Append the grad_DM function.
             _func_dM = njit(dl_load(sym_Eqn))
-
-            # Increase by one.
-            eqn_counter += 1
 
         # _end_with_
 
@@ -486,16 +477,7 @@ class Lorenz96(StochasticProcess):
             # Append the grad_DS function.
             _func_dS = njit(dl_load(sym_Eqn))
 
-            # Increase by one.
-            eqn_counter += 1
-
         # _end_with_
-
-        # Sanity check.
-        if eqn_counter != 3:
-            raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Some symbolic equations failed to load [{eqn_counter}/3].")
-        # _end_if_
 
         # Construct the functions here.
         self._construct_functions(_func_En, _func_dM, _func_dS)

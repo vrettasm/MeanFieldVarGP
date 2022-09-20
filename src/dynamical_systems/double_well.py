@@ -108,9 +108,6 @@ class DoubleWell(StochasticProcess):
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
 
-        # Counter of the loaded equations.
-        eqn_counter = 0
-
         # Get the current directory of the file.
         current_dir = Path(__file__).resolve().parent
 
@@ -120,9 +117,6 @@ class DoubleWell(StochasticProcess):
             # Append the energy function.
             self.Esde.append(njit(dl_load(sym_Eqn)))
 
-            # Increase by one.
-            eqn_counter += 1
-
         # _end_with_
 
         # Load the mean-gradient file.
@@ -130,9 +124,6 @@ class DoubleWell(StochasticProcess):
 
             # Append the grad_DM function.
             self.dEsde_dm.append(njit(dl_load(sym_Eqn)))
-
-            # Increase by one.
-            eqn_counter += 1
 
         # _end_with_
 
@@ -142,16 +133,7 @@ class DoubleWell(StochasticProcess):
             # Append the grad_DS function.
             self.dEsde_ds.append(njit(dl_load(sym_Eqn)))
 
-            # Increase by one.
-            eqn_counter += 1
-
         # _end_with_
-
-        # Sanity check.
-        if eqn_counter != 3:
-            raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" Some symbolic equations failed to load [{eqn_counter}/3].")
-        # _end_if_
 
     # _end_def_
 
