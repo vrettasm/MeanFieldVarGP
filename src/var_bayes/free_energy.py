@@ -305,9 +305,12 @@ class FreeEnergy(object):
         h = float(delta_t/3.0)
         c = float(delta_t/2.0)
 
-        # Total set of input parameters (pack).
-        params = [ti, ti + h, ti + (2 * h), ti + (3 * h),
-                  ti, ti + c, ti + (2 * c),
+        # Pack the total set of input parameters.
+        # Note: If everything is done right then:
+        #   1) tj == ti + (3 * h)
+        #   2) tj == ti + (2 * c)
+        params = [ti, ti + h, ti + (2 * h), tj,
+                  ti, ti + c, tj,
                   *mean_pts.ravel(order='C'),
                   *vars_pts.ravel(order='C'),
                   *sigma, *theta]
@@ -315,18 +318,15 @@ class FreeEnergy(object):
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
         Esde = quad_vec(lambda t: _drift_fun_sde(t, *params), ti, tj,
-                        limit=100, epsabs=1.0e-08, epsrel=1.0e-06,
-                        quadrature='gk15')[0]
+                        limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dMp in [ti, tj].
         integral_dEn_dm = quad_vec(lambda t: _grad_fun_mp(t, *params), ti, tj,
-                                   limit=100, epsabs=1.0e-08, epsrel=1.0e-06,
-                                   quadrature='gk15')[0]
+                                   limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dSp in [ti, tj].
         integral_dEn_ds = quad_vec(lambda t: _grad_fun_vp(t, *params), ti, tj,
-                                   limit=100, epsabs=1.0e-08, epsrel=1.0e-06,
-                                   quadrature='gk15')[0]
+                                   limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
         # Sanity check.
         if inv_sigma.size == 1:
 
