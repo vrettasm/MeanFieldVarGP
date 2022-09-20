@@ -94,7 +94,7 @@ class FreeEnergy(object):
             # Sanity check.
             if len(obs_mask) != self.dim_D:
                 raise RuntimeError(f" {self.__class__.__name__}:"
-                                   f" Observation operator mismatch {len(obs_mask)} != {self.dim_D}")
+                                   f" Observation mask mismatch {len(obs_mask)} != {self.dim_D}")
             # _end_if_
 
             # Sanity check.
@@ -105,7 +105,13 @@ class FreeEnergy(object):
 
             else:
                 raise ValueError(f" {self.__class__.__name__}:"
-                                 f" Observation operator contains non-boolean!")
+                                 f" Observation mask contains non-boolean values!")
+            # _end_if_
+
+            # Sanity check.
+            if sum(self.obs_mask) == 0:
+                raise RuntimeError(f" {self.__class__.__name__}:"
+                                   f" Observation mask contains only False values.")
             # _end_if_
 
         # _end_if_
@@ -415,17 +421,17 @@ class FreeEnergy(object):
         # Extract all the result from the parallel run.
         # NOTE: The order of the results matters in the
         # computation of the gradients!
-        for result_ in results:
+        for res_ in results:
         
             # This is the sub-interval.
-            i = result_[0]
+            i = res_[0]
 
             # Accumulate the Esde here.
-            Esde += result_[1]
+            Esde += res_[1]
 
             # The gradients will be accumulated in the E_cost.
-            dEsde_dm[i] = result_[2]
-            dEsde_ds[i] = result_[3]
+            dEsde_dm[i] = res_[2]
+            dEsde_ds[i] = res_[3]
         # _end_for_
 
         # Sanity check.
@@ -469,13 +475,13 @@ class FreeEnergy(object):
         # _end_if_
 
         # Auxiliary quantity: (Y - H*m).
-        Y_minus_Hm = self.obs_values.T - mean_pts[self.obs_mask, :]
+        Y_minus_Hm = self.obs_values.T - mean_pts
 
         # Auxiliary quantity (for the E_obs).
         Z = Qi.dot(Y_minus_Hm)
 
         # Auxiliary quantity (for the E_obs).
-        W = Ri.diagonal().dot(vars_pts[self.obs_mask, :])
+        W = Ri.diagonal().dot(vars_pts)
 
         # These are the derivatives of E_{obs} w.r.t. the mean points.
         kappa_1 = -Ri.dot(Y_minus_Hm).T
@@ -583,13 +589,14 @@ class FreeEnergy(object):
                                               vars_points)
 
         # Energy from the observations' likelihood (and gradients).
-        Eobs, dEobs_dm, dEobs_ds = self.E_obs(mean_points[:, self.ikm],
-                                              vars_points[:, self.iks])
+        Eobs, dEobs_dm, dEobs_ds = self.E_obs(mean_points[self.ix_ikm],
+                                              vars_points[self.ix_iks])
         # Put all energy values together.
         Ecost = E0 + Esde + Eobs
 
         # Check if we want the gradients to be returned.
         if not output_gradients:
+
             # Exit here.
             return Ecost
         # _end_if_
@@ -615,7 +622,7 @@ class FreeEnergy(object):
             Ecost_ds[:, (2 * n+1): (2 * n) + 3] = dEsde_ds[n][:, 1:]
 
         # _end_for_
-
+        
         # Add the initial contribution from E0.
         Ecost_dm[:, 0] += dE0_dm0
         Ecost_ds[:, 0] += dE0_ds0
