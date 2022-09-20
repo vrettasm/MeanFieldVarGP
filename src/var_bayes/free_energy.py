@@ -18,7 +18,8 @@ class FreeEnergy(object):
     # Declare all the class variables here.
     __slots__ = ("drift_fun_sde", "grad_fun_mp", "grad_fun_vp", "_mu0", "_tau0",
                  "theta", "sigma", "tk", "obs_times", "obs_noise", "obs_values",
-                 "obs_mask", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks")
+                 "obs_mask", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks",
+                 "ix_ikm", "ix_iks")
 
     def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
@@ -147,6 +148,11 @@ class FreeEnergy(object):
         # Indexes of the observations at the mean/variance points.
         self.ikm = [3*i for i in range(1, self.num_M+1)]
         self.iks = [2*i for i in range(1, self.num_M+1)]
+
+        # This mesh-grid of indexes is used in E_cost
+        # method to map the observation gradients.
+        self.ix_ikm = np.ix_(self.obs_mask, self.ikm)
+        self.ix_iks = np.ix_(self.obs_mask, self.iks)
 
     # _end_def_
 
@@ -481,11 +487,13 @@ class FreeEnergy(object):
         Eobs = 0.0
 
         # Initialize gradients arrays.
-        dEobs_dm = zeros((self.dim_D, self.num_M), dtype=float)
-        dEobs_ds = zeros((self.dim_D, self.num_M), dtype=float)
+        dEobs_dm = zeros((self.dim_d, self.num_M), dtype=float)
+        dEobs_ds = zeros((self.dim_d, self.num_M), dtype=float)
 
         # Remove singleton dimensions.
-        kappa_1 = squeeze(kappa_1)
+        if self.dim_d == 1:
+            kappa_1 = squeeze(kappa_1)
+        # _end_if_
 
         # Calculate partial energies from all 'M' observations.
         # NOTE: The gradients are given by:
@@ -500,10 +508,10 @@ class FreeEnergy(object):
             Eobs += Zk.T.dot(Zk) + W[k]
 
             # Gradient of E_{obs} w.r.t. m(tk).
-            dEobs_dm[self.obs_mask, k] = kappa_1[k]
+            dEobs_dm[:, k] = kappa_1[k]
 
             # Gradient of E_{obs} w.r.t. S(tk).
-            dEobs_ds[self.obs_mask, k] = kappa_2
+            dEobs_ds[:, k] = kappa_2
         # _end_for_
 
         # Logarithm of 2*pi.
@@ -516,6 +524,12 @@ class FreeEnergy(object):
         if not np.isfinite(Eobs):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Eobs is not a finite number: {Eobs}")
+        # _end_if_
+
+        # Remove singleton dimensions.
+        if self.dim_d == 1:
+            dEobs_dm = squeeze(dEobs_dm)
+            dEobs_ds = squeeze(dEobs_ds)
         # _end_if_
 
         # Return the total observation energy
@@ -607,8 +621,8 @@ class FreeEnergy(object):
         Ecost_ds[:, 0] += dE0_ds0
 
         # Add the gradients (at observation times).
-        Ecost_dm[:, self.ikm] += dEobs_dm
-        Ecost_ds[:, self.iks] += dEobs_ds
+        Ecost_dm[self.ix_ikm] += dEobs_dm
+        Ecost_ds[self.ix_iks] += dEobs_ds
 
         # Rescale the variance gradients to account for
         # the log-transformation and ensure positivity.
