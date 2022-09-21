@@ -2,6 +2,7 @@ import numpy as np
 from numba import njit
 from pathlib import Path
 from dill import load as dl_load
+from numpy import array as array_t
 from dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -13,13 +14,13 @@ class OrnsteinUhlenbeck(StochasticProcess):
     https://en.wikipedia.org/wiki/Ornstein%E2%80%93Uhlenbeck_process
     """
 
-    def __init__(self, sigma: float, theta: float, r_seed: int = None):
+    def __init__(self, sigma: float, theta: array_t, r_seed: int = None):
         """
         Default constructor of the Ornstein-Uhlenbeck (OU) object.
 
-        :param sigma: (float) noise diffusion coefficient.
+        :param sigma: (float) noise diffusion coefficient (sigma).
 
-        :param theta: (float) drift model parameter.
+        :param theta: (array) drift model parameters (theta, mu).
 
         :param r_seed: (int) random seed.
         """
@@ -47,7 +48,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         return 1.0 / self.sigma
     # _end_def_
 
-    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01, mu: float = 0.0):
+    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
         """
         Generates a realizations of the Ornstein-Uhlenbeck (OU)
         dynamical system within a specified time-window [t0-tf].
@@ -58,10 +59,11 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
         :param dt: (float) discrete time-step.
 
-        :param mu: (float) default mean value is zero.
-
         :return: None.
         """
+
+        # Extract drift parameters.
+        theta, mu = self.theta
 
         # Create a time-window with 'dt' time step.
         tk = np.arange(t0, tf+dt, dt, dtype=float)
@@ -80,7 +82,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
 
         # Create the sample path.
         for t in range(1, dim_t):
-            x[t] = x[t-1] + self.theta * (mu - x[t-1]) * dt + ek[t]
+            x[t] = x[t-1] + theta * (mu - x[t-1]) * dt + ek[t]
         # _end_for_
 
         # Store the sample path (trajectory).
