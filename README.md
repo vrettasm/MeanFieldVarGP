@@ -1,6 +1,6 @@
 # MeanFieldVarGP
 
-![logo](./abstract.png "Paper")
+![logo](./abstract.png "Abstract")
 
 **Mean field variational Gaussian process algorithm**
 
