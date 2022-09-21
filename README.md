@@ -54,9 +54,9 @@ We provide three examples on how to use this method:
 
 1. [Double-Well (1D).](src/examples/example_DW.ipynb) The first one is a one-dimensional DW system.
 Even though the mean-field algorithm is meant to be applied on high dimensional system, this 1D
-example here helps with debugging the algorithm at the early stages of development. For these
-low dimensional systems the original (full) **VGPA** algorithm is preferred because it provides
-a one-dimensional version that makes everything much faster.
+example here helps with debugging the algorithm at the early stages of development. For these low
+dimensional systems the original (full) [VGPA](https://github.com/vrettasm/VGPA) algorithm is preferred
+because it provides a one-dimensional version that makes everything much faster.
 
 2. [Lorenz '63 (3D).](src/examples/example_L63.ipynb) The second system considered is the chaotic
 Lorenz 1963 model (the butterfly model). Again, even though this is not very high dimensional
