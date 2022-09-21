@@ -41,9 +41,12 @@ pool can be tuned to include more CPUs (setting the option '**n_jobs=**' inside 
 
 ## Required packages
 
-The recommended version is **Python3.8**. To simplify the required packages just use:
+The recommended version is **Python3.8**. To simplify the installation of the required
+packages use:
 
     $ pip install -r requirements.txt
+
+**Hint:** The usage of a virtual environment is highly recommended.
 
 ## Examples
 
