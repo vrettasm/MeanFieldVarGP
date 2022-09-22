@@ -56,8 +56,7 @@ class SCG(object):
         self.display = p_list["display"] if "display" in p_list else False
 
         # Statistics dictionary.
-        self.stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
-                      "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0}
+        self.stats = None
     # _end_def_
 
     @property
@@ -100,6 +99,13 @@ class SCG(object):
 
         :return: the statistics dictionary.
         """
+
+        # Sanity check.
+        if self.stats is None:
+            raise NotImplementedError(f" {self.__class__.__name__}:"
+                                      f" Stats dictionary has not been created.")
+        # _end_if_
+
         return self.stats
 
     # _end_def_
@@ -112,9 +118,16 @@ class SCG(object):
 
         :param args: additional function / gradient parameters.
 
-        :return: 1)  x: the point where the minimum was found,
-                 2) fx: the function value (at the minimum point).
+        :return: 1)  x: the point where the minimum was found
+                 2) fx: the function value (at the minimum point)
         """
+
+        # Reset the stats in the object.
+        self.stats = None
+
+        # Local dictionary with statistical information.
+        _stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
+                  "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0}
 
         @njit(fastmath=True)
         def _fast_sum_abs(x_in: array_t):
@@ -136,7 +149,7 @@ class SCG(object):
         # Localize 'f'.
         func = self.f
 
-        # Localize copy/copy_to functions.
+        # Localize copy / copy_to functions.
         _copy, _copy_to = np.copy, np.copyto
 
         # Make sure input is flat.
@@ -155,7 +168,7 @@ class SCG(object):
         grad_old = np.zeros_like(grad_new)
 
         # Increase function evaluations by one.
-        self.stats["func_eval"] += 1
+        _stats["func_eval"] += 1
 
         # Store the current values (fx / dfx).
         f_old = f_now
@@ -164,8 +177,8 @@ class SCG(object):
         # Set the initial search direction.
         d = -grad_new
 
-        # Force calculation of directional derivatives.
-        success = 1
+        # Forces the calculation of directional derivatives.
+        success = True
 
         # Counts the number of successes.
         count_success = 0
@@ -188,9 +201,9 @@ class SCG(object):
         # Main optimization loop.
         for j in range(self.nit):
 
-            # Calculate 1st and 2nd
+            # Calculate 1-st and 2-nd
             # directional derivatives.
-            if success == 1:
+            if success:
                 # Inner-product.
                 mu = d.T.dot(grad_new)
 
@@ -202,13 +215,16 @@ class SCG(object):
                 # Compute kappa.
                 kappa = d.T.dot(d)
 
-                # And check for termination.
+                # Check for termination.
                 if kappa < eps_float:
                     # Copy the value.
                     fx = f_now
 
                     # Update the statistic.
-                    self.stats["MaxIt"] = j+1
+                    _stats["MaxIt"] = j+1
+
+                    # Update object stats.
+                    self.stats = _stats
 
                     # Exit from here.
                     return x, fx
@@ -221,8 +237,8 @@ class SCG(object):
                 # We evaluate the df(x_plus).
                 _, g_plus = func(x_plus)
 
-                # Increase function evaluations by one.
-                self.stats["func_eval"] += 1
+                # Increase function evaluations.
+                _stats["func_eval"] += 1
 
                 # Compute theta.
                 theta = (d.T.dot(g_plus - grad_new)) / sigma
@@ -245,32 +261,38 @@ class SCG(object):
             f_new = func(x_new, False)
 
             # Note that the gradient is computed anyway.
-            self.stats["func_eval"] += 1
+            _stats["func_eval"] += 1
 
             # Calculate the new comparison ratio.
             Delta = 2.0 * (f_new - f_old) / (alpha * mu)
             if Delta >= 0.0:
-                # Update counters.
-                success = 1
+
+                # Set the flag.
+                success = True
+
+                # Update counter.
                 count_success += 1
 
                 # Copy the new values.
-                f_now = f_new
-                g_now = _copy(grad_new)
+                f_now, g_now = f_new, _copy(grad_new)
 
                 # Update the new search position.
                 _copy_to(x, x_new)
             else:
-                success = 0
+
+                # Cancel the flag.
+                success = False
+
+                # Copy the old values.
                 f_now, g_now = f_old, _copy(grad_old)
             # _end_if_
 
-            # Total gradient.
+            # Total gradient: j-th iteration.
             total_grad = _fast_sum_abs(g_now)
 
             # Store statistics.
-            self.stats["fx"][j] = f_now
-            self.stats["dfx"][j] = total_grad
+            _stats["fx"][j] = f_now
+            _stats["dfx"][j] = total_grad
 
             # Used in verbose/display mode.
             if self.display and (np.mod(j, 50) == 0):
@@ -288,7 +310,7 @@ class SCG(object):
             # _end_if_
 
             # Check for success.
-            if success == 1:
+            if success:
 
                 # Check for termination.
                 if (np.abs(alpha * d).max() <= self.x_tol) and\
@@ -297,7 +319,10 @@ class SCG(object):
                     fx = f_new
 
                     # Update the statistic.
-                    self.stats["MaxIt"] = j + 1
+                    _stats["MaxIt"] = j + 1
+
+                    # Update object stats.
+                    self.stats = _stats
 
                     # Exit.
                     return x, fx
@@ -312,7 +337,7 @@ class SCG(object):
                     f_now, grad_new = func(x, *args)
 
                     # Increase function evaluations by one.
-                    self.stats["func_eval"] += 1
+                    _stats["func_eval"] += 1
 
                     # If the gradient is zero then exit.
                     if np.isclose(grad_new.T.dot(grad_new), 0.0):
@@ -320,7 +345,10 @@ class SCG(object):
                         fx = f_now
 
                         # Update the statistic.
-                        self.stats["MaxIt"] = j + 1
+                        _stats["MaxIt"] = j + 1
+
+                        # Update object stats.
+                        self.stats = _stats
 
                         # Exit.
                         return x, fx
@@ -344,8 +372,8 @@ class SCG(object):
                 d = -grad_new
                 count_success = 0
             else:
-
-                if success == 1:
+                # Check the flag.
+                if success:
                     gamma = np.maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
                     d = (gamma * d) - grad_new
                 # _end_if_
@@ -359,6 +387,9 @@ class SCG(object):
 
         # Here we have reached the maximum number of iterations.
         fx = f_old
+
+        # Update object stats.
+        self.stats = _stats
 
         # Exit from here.
         return x, fx
