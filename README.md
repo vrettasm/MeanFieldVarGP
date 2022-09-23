@@ -12,6 +12,13 @@ https://journals.aps.org/pre/abstract/10.1103/PhysRevE.91.012148).
 "Variational mean-field algorithm for efficient inference in large systems
 of stochastic differential equations", Physical Review E. vol. 91, 2015, 012148.
 
+**ATTENTION:**
+Equation (27) in the paper has a typo. There is an extra square in the denominator
+at the s(t). This was only in the paper as the code was done correctly. You can see
+this in the two examples below, on how to compute the energy terms. Also, a proof
+of the corrected equation can be found here [Note: 1](src/notes/PRE_Note_01.jpg)
+and here [Note: 2](src/notes/PRE_Note_02.jpg).
+
 ## Expectations and gradients
 
 In order to use the algorithm on a new system, one has to derive first a few expression
