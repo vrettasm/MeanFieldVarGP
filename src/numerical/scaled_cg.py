@@ -149,8 +149,8 @@ class SCG(object):
         # Localize 'f'.
         func = self.f
 
-        # Localize copy / copy_to functions.
-        _copy, _copy_to = np.copy, np.copyto
+        # Localize function.
+        _copy_to = np.copyto
 
         # Make sure input is flat.
         x = x0.flatten()
@@ -164,15 +164,14 @@ class SCG(object):
         # Initial function/gradients value.
         f_now, grad_new = func(x, *args)
 
-        # Initialize old gradient vector.
-        grad_old = np.zeros_like(grad_new)
+        # Initialize grad_old vector.
+        grad_old = np.copy(grad_new)
 
         # Increase function evaluations by one.
         _stats["func_eval"] += 1
 
         # Store the current values (fx / dfx).
         f_old = f_now
-        _copy_to(grad_old, grad_new)
 
         # Set the initial search direction.
         d = -grad_new
@@ -257,8 +256,10 @@ class SCG(object):
             # Evaluate the function at a new point.
             x_new = x + (alpha * d)
 
-            # Return only the fx (not the dfx).
-            f_new = func(x_new, False)
+            # Evaluate fx and dfx at the new point.
+            # NOTE: Because we haven't accepted yet this position as the
+            # next 'x' state, we use the 'g_now' to store the gradient.
+            f_new, g_now = func(x_new)
 
             # Note that the gradient is computed anyway.
             _stats["func_eval"] += 1
@@ -274,17 +275,22 @@ class SCG(object):
                 count_success += 1
 
                 # Copy the new values.
-                f_now, g_now = f_new, _copy(grad_new)
+                f_now = f_new
 
                 # Update the new search position.
                 _copy_to(x, x_new)
+
             else:
 
                 # Cancel the flag.
                 success = False
 
                 # Copy the old values.
-                f_now, g_now = f_old, _copy(grad_old)
+                f_now = f_old
+
+                # Update the gradient vector.
+                _copy_to(g_now, grad_old)
+
             # _end_if_
 
             # Total gradient: j-th iteration.
@@ -307,6 +313,7 @@ class SCG(object):
 
                 # Assign the current time to 't0'.
                 time_t0 = time_tj
+
             # _end_if_
 
             # Check for success.
