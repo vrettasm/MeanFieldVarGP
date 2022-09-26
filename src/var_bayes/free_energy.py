@@ -1,6 +1,7 @@
 import time
 import numpy as np
 from numpy import zeros
+from numpy import full as np_full
 from numpy import array as array_t
 from numpy import reshape as reshape
 from numpy import squeeze as squeeze
@@ -513,42 +514,8 @@ class FreeEnergy(object):
         # Auxiliary quantity (for the E_obs).
         W = Ri.diagonal().dot(vars_pts)
 
-        # These are the derivatives of E_{obs} w.r.t. the mean points.
-        kappa_1 = -Ri.dot(Y_minus_Hm).T
-
-        # Note that the dEobs(k)/ds(k) is identical for all observations.
-        kappa_2 = 0.5 * Ri.diagonal()
-
-        # Initialize observations' energy.
-        Eobs = 0.0
-
-        # Initialize gradients arrays.
-        dEobs_dm = zeros((self.dim_d, self.num_M), dtype=float)
-        dEobs_ds = zeros((self.dim_d, self.num_M), dtype=float)
-
-        # Remove singleton dimensions.
-        if self.dim_d == 1:
-            kappa_1 = squeeze(kappa_1)
-        # _end_if_
-
-        # Calculate partial energies from all 'M' observations.
-        # NOTE: The gradients are given by:
-        #   1. dEobs(k)/dm(k) := -H'*Ri*(yk-h(xk))
-        #   2. dEobs(k)/ds(k) := 0.5*diag(H'*Ri*H)
-        for k in range(self.num_M):
-
-            # Get the auxiliary value.
-            Zk = Z[:, k]
-
-            # Compute the energy of the k-th observation.
-            Eobs += Zk.T.dot(Zk) + W[k]
-
-            # Gradient of E_{obs} w.r.t. m(tk).
-            dEobs_dm[:, k] = kappa_1[k]
-
-            # Gradient of E_{obs} w.r.t. S(tk).
-            dEobs_ds[:, k] = kappa_2
-        # _end_for_
+        # Compute observations' energy.
+        Eobs = np.sum(Z.T.dot(Z).diagonal() + W)
 
         # Logarithm of 2*pi.
         log2pi = 1.8378770664093453
@@ -561,6 +528,16 @@ class FreeEnergy(object):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Eobs is not a finite number: {Eobs}")
         # _end_if_
+
+        # Initialize dEobs(k)/dm(k) gradients array.
+        # >> dEobs(k)/dm(k) := -H'*Ri*(yk-h(xk))
+        dEobs_dm = -Ri.dot(Y_minus_Hm)
+
+        # Note that the dEobs(k)/ds(k) is identical
+        # for all observations.
+        # >> dEobs(k)/ds(k) := 0.5*diag(H'*Ri*H)
+        dEobs_ds = np_full((self.dim_d, self.num_M),
+                           0.5 * np.atleast_2d(Ri.diagonal()).T, dtype=float)
 
         # Remove singleton dimensions.
         if self.dim_d == 1:
