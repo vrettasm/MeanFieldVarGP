@@ -33,7 +33,7 @@ def _l96(x: array_t, u: array_t) -> array_t:
 
     https://en.wikipedia.org/wiki/Lorenz_96_model
 
-    :param x: state vector (dim_d x 1).
+    :param x: state vector (dim_D x 1).
 
     :param u: additional parameters (theta).
 
@@ -57,10 +57,10 @@ class Lorenz96(StochasticProcess):
     https://en.wikipedia.org/wiki/Lorenz_96_model
     """
 
-    __slots__ = ("dim_d",)
+    __slots__ = ("dim_D",)
 
     def __init__(self, sigma: array_t, theta: array_t,
-                 dim_d: int = 40, r_seed: int = None):
+                 dim_D: int = 40, r_seed: int = None):
         """
         Default constructor of the L96 object.
 
@@ -70,16 +70,16 @@ class Lorenz96(StochasticProcess):
 
         :param r_seed: (int) random seed (default = None).
 
-        :param dim_d: (int) dimensionality of the model (default = 40).
+        :param dim_D: (int) dimensionality of the model (default = 40).
         """
 
         # Call the constructor of the parent class.
         super().__init__(r_seed=r_seed)
 
         # Check the number of input dimensions.
-        if dim_d < 4:
+        if dim_D < 4:
             raise ValueError(f" {self.__class__.__name__}:"
-                             f" Insufficient state vector dimensions: {dim_d}")
+                             f" Insufficient state vector dimensions: {dim_D}")
         # _end_if_
 
         # Make sure the inputs are numpy arrays.
@@ -87,12 +87,12 @@ class Lorenz96(StochasticProcess):
         theta = np.asarray(theta, dtype=float)
 
         # Store the model dimensions.
-        self.dim_d = int(dim_d)
+        self.dim_D = int(dim_D)
 
         # Check the dimensions of the input.
         if sigma.ndim == 0:
             # Vector (from scalar).
-            self.sigma = sigma * np.ones(dim_d)
+            self.sigma = sigma * np.ones(dim_D)
 
         elif sigma.ndim == 1:
             # Copy the vector.
@@ -108,7 +108,7 @@ class Lorenz96(StochasticProcess):
         # _end_if_
 
         # Check the dimensionality.
-        if len(self.sigma) != dim_d:
+        if len(self.sigma) != dim_D:
             raise ValueError(f" {self.__class__.__name__}:"
                              f" Wrong matrix dimensions: {self._sigma.shape}")
         # _end_if_
@@ -152,19 +152,19 @@ class Lorenz96(StochasticProcess):
         dim_t = tk.size
 
         # Default starting point.
-        x0 = self.theta * np.ones(self.dim_d)
+        x0 = self.theta * np.ones(self.dim_D)
 
         # Initial conditions time step.
         delta_t = 1.0E-3
 
         # Perturb the middle of the vector
         # by a small value.
-        x0[int(self.dim_d / 2.0)] += 0.01
+        x0[int(self.dim_D / 2.0)] += 0.01
 
         # BURN IN: The higher the number of
         # dimensions the more iterations to
         # burn in.
-        for t in range(125 * self.dim_d):
+        for t in range(125 * self.dim_D):
             x0 = x0 + _l96(x0, self.theta) * delta_t
         # _end_for_
 
@@ -175,7 +175,7 @@ class Lorenz96(StochasticProcess):
         # _end_if_
 
         # Allocate array.
-        x = np.zeros((dim_t, self.dim_d), dtype=float)
+        x = np.zeros((dim_t, self.dim_D), dtype=float)
 
         # Start with the new point.
         x[0] = x0
@@ -185,10 +185,10 @@ class Lorenz96(StochasticProcess):
         ek = np.sqrt(self.sigma * dt)
 
         # Repeat the vector for the multiplication.
-        ek = np.repeat(ek, dim_t).reshape(self.dim_d, dim_t)
+        ek = np.repeat(ek, dim_t).reshape(self.dim_D, dim_t)
 
         # Multiply with random variables from N(0, 1).
-        ek = ek * self.rng.standard_normal((self.dim_d, dim_t))
+        ek = ek * self.rng.standard_normal((self.dim_D, dim_t))
 
         # Create the path by solving the SDE iteratively.
         for t in range(1, dim_t):
@@ -273,14 +273,14 @@ class Lorenz96(StochasticProcess):
             # Extract the drift parameter.
             theta = args[-1]
 
-            # Return the unpack parameters.
+            # Return the unpacked parameters.
             return time_vars, mp, sp, sigma, theta
         # _end_def_
 
         def _l96_En(t, *args):
 
             # State vector dimensions.
-            D = self.dim_d
+            D = self.dim_D
 
             # Unpack the arguments.
             time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
@@ -301,10 +301,10 @@ class Lorenz96(StochasticProcess):
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
-                param = [*time_vars,
+                param = (*time_vars,
                          *mp[idx, :].ravel(order='C'),
                          *sp[idx, :].ravel(order='C'),
-                         *sigma[idx], theta]
+                         *sigma[idx], theta)
 
                 # Add the function value to the list.
                 f_values_append(_func_En(t, *param))
@@ -320,7 +320,7 @@ class Lorenz96(StochasticProcess):
         def _l96_dEn_dm(t, *args):
 
             # State vector dimensions.
-            D = self.dim_d
+            D = self.dim_D
 
             # Unpack the arguments.
             time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
@@ -341,10 +341,10 @@ class Lorenz96(StochasticProcess):
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
-                param = [*time_vars,
+                param = (*time_vars,
                          *mp[idx, :].ravel(order='C'),
                          *sp[idx, :].ravel(order='C'),
-                         *sigma[idx], theta]
+                         *sigma[idx], theta)
 
                 # Get the list of gradients.
                 _grad_dm = _func_dM(t, *param)
@@ -371,7 +371,7 @@ class Lorenz96(StochasticProcess):
         def _l96_dEn_ds(t, *args):
 
             # State vector dimensions.
-            D = self.dim_d
+            D = self.dim_D
 
             # Unpack the arguments.
             time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
@@ -392,10 +392,10 @@ class Lorenz96(StochasticProcess):
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
-                param = [*time_vars,
+                param = (*time_vars,
                          *mp[idx, :].ravel(order='C'),
                          *sp[idx, :].ravel(order='C'),
-                         *sigma[idx], theta]
+                         *sigma[idx], theta)
 
                 # Get the list of gradients.
                 _grad_ds = _func_dS(t, *param)
