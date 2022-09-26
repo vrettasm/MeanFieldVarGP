@@ -366,11 +366,11 @@ class FreeEnergy(object):
         # Note: If everything is done right then:
         #   1) tj == ti + (3 * h)
         #   2) tj == ti + (2 * c)
-        params = [ti, ti + h, ti + (2 * h), tj,
+        params = (ti, ti + h, ti + (2 * h), tj,
                   ti, ti + c, tj,
                   *mean_pts.ravel(order='C'),
                   *vars_pts.ravel(order='C'),
-                  *sigma, *theta]
+                  *sigma, *theta)
 
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
