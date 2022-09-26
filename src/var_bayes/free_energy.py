@@ -304,8 +304,38 @@ class FreeEnergy(object):
     # _end_def_
 
     @staticmethod
-    def single_interval(n_th, ti, tj, _drift_fun_sde, _grad_fun_mp, _grad_fun_vp,
-                        mean_pts, vars_pts, sigma, theta, inv_sigma):
+    def single_interval(n_th: int, ti: float, tj: float, drift_func: callable, gradMP_func: callable,
+                        gradSP_func: callable, mean_pts: array_t, vars_pts: array_t, sigma: array_t,
+                        theta: array_t, inv_sigma: array_t):
+        """
+        This static method computes the integrated values of the Esde and its gradients for a single
+        time interval [ti, tj].
+
+        :param n_th: this integer value represent the n-th interval of integration. It is used mainly
+        to guarantee the order in which we return the values from the Parallel loop.
+
+        :param ti: this is the first limit of integration in the [ti, tj] interval.
+
+        :param tj: this is the second limit of integration in the [ti, tj] interval.
+
+        :param drift_func: this is the Esde (drift) function.
+
+        :param gradMP_func: this is the dEsde_dm function.
+
+        :param gradSP_func: this is the dEsde_ds function.
+
+        :param mean_pts: mean (polynomial) points in the n-th interval.
+
+        :param vars_pts: variance (polynomial) points in the n-th interval.
+
+        :param sigma: diffusion noise parameters vector.
+
+        :param theta: drift model parameters vector.
+
+        :param inv_sigma: inverse values of diffusion noise vector.
+
+        :return: the integrated values (in [ti, tj] of Esde, dEsde_dm and dEsde_ds.
+        """
 
         # NOTE: This should not change for equally spaced
         # observations. This is here to ensure that small
@@ -329,15 +359,15 @@ class FreeEnergy(object):
 
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
-        Esde = quad_vec(lambda t: _drift_fun_sde(t, *params), ti, tj,
+        Esde = quad_vec(lambda t: drift_func(t, *params), ti, tj,
                         limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-        integral_dEn_dm = quad_vec(lambda t: _grad_fun_mp(t, *params), ti, tj,
+        integral_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
                                    limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-        integral_dEn_ds = quad_vec(lambda t: _grad_fun_vp(t, *params), ti, tj,
+        integral_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
                                    limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
         # Sanity check.
         if inv_sigma.size == 1:
