@@ -5,9 +5,10 @@ from numpy import full as np_full
 from numpy import array as array_t
 from numpy import reshape as reshape
 from numpy import squeeze as squeeze
-from joblib import Parallel, delayed
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
+from joblib import (Parallel, delayed,
+                    cpu_count)
 
 from numerical.scaled_cg import SCG
 from numerical.utilities import cholesky_inv, log_det
@@ -16,15 +17,18 @@ from dynamical_systems.stochastic_process import StochasticProcess
 
 class FreeEnergy(object):
 
+    # Get the maximum number of CPUs.
+    MAX_CPUs = cpu_count()
+
     # Declare all the class variables here.
     __slots__ = ("drift_fun_sde", "grad_fun_mp", "grad_fun_vp", "_mu0", "_tau0",
                  "theta", "sigma", "tk", "obs_times", "obs_noise", "obs_values",
                  "obs_mask", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks",
-                 "ix_ikm", "ix_iks")
+                 "ix_ikm", "ix_iks", "n_jobs")
 
     def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
                  obs_times: array_t, obs_values: array_t, obs_noise: array_t,
-                 obs_mask: list = None):
+                 obs_mask: list = None, n_jobs: int = 1):
         """
         Default constructor of the FreeEnergy class.
 
@@ -43,6 +47,10 @@ class FreeEnergy(object):
         :param obs_mask: observation mask (default = None).
         This is a list that defines which dimensions are observed and
         which are not. By default, all states are assumed to be observed.
+
+        :param n_jobs: integer value of the parallel jobs we want to start.
+        Any non-positive value (i.e. 0, -1, -2, ...) will set the variable
+        to the MAX_CPUs.
         """
 
         # (WRAPPER FUNCTION): SDE energy function.
@@ -116,6 +124,12 @@ class FreeEnergy(object):
             # _end_if_
 
         # _end_if_
+
+        # Make sure the value is integer.
+        n_jobs = int(n_jobs)
+
+        # Assign the required CPUs to a local variable.
+        self.n_jobs = FreeEnergy.MAX_CPUs if n_jobs < 1 else np.minimum(n_jobs, FreeEnergy.MAX_CPUs)
 
         # Infer the observations dimensions.
         if self.obs_values.ndim in (0, 1):
@@ -436,8 +450,8 @@ class FreeEnergy(object):
         # preferred to use as backend "threading".
         back_end = "loky" if dim_D > 8 else "threading"
 
-        # Run the 'L' intervals in parallel.
-        results = Parallel(n_jobs=4, backend=back_end)(
+        # Run the 'L' intervals in parallel (with n_jobs).
+        results = Parallel(n_jobs=self.n_jobs, backend=back_end)(
 
             delayed(_single_interval)(n, obs_times[n], obs_times[n+1],
                                       self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
