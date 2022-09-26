@@ -423,9 +423,6 @@ class FreeEnergy(object):
         # (between the observations).
         L = obs_times.size - 1
 
-        # Initialize energy for the SDE.
-        Esde = 0.0
-
         # Initialize the gradients arrays.
         # -> dEsde_dm := dEsde(tk)/dm(tk)
         # -> dEsde_ds := dEsde(tk)/ds(tk)
@@ -448,6 +445,9 @@ class FreeEnergy(object):
                                       vars_pts[:, (2 * n): (2 * n) + 3],
                                       self.sigma, self.theta, inv_sigma) for n in range(L)
         )
+
+        # Initialize energy for the SDE.
+        Esde = 0.0
 
         # Extract all the result from the parallel run.
         # NOTE: The order of the results matters in the
