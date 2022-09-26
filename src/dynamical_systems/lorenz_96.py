@@ -4,7 +4,6 @@ from pathlib import Path
 from dill import load as dl_load
 from numpy import array as array_t
 from numpy import zeros as _zeros
-from numpy import reshape as _reshape
 from dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -248,11 +247,12 @@ class Lorenz96(StochasticProcess):
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
 
-        def _l96_En(t, *args):
-
-            # State vector dimensions.
-            D = self.dim_d
-
+        @njit
+        def _unpack_args(D: int, args: array_t):
+            """
+            Local function that unpacks the list of arguments.
+            Compiled with numba for faster execution.
+            """
             # The first seven variables are the fixed time-points.
             i0 = 7
 
@@ -261,17 +261,29 @@ class Lorenz96(StochasticProcess):
 
             # Extract the mean points.
             i1 = i0 + (D * 4)
-            mp = _reshape(args[i0: i1], (D, 4), order='C')
+            mp = args[i0: i1].reshape(D, 4)
 
             # Extract the variance points.
             i2 = i1 + (D * 3)
-            sp = _reshape(args[i1: i2], (D, 3), order='C')
+            sp = args[i1: i2].reshape(D, 3)
 
             # Extract the diffusion noise parameters.
-            sigma = array_t(args[i2: i2 + D])
+            sigma = args[i2: i2 + D]
 
             # Extract the drift parameter.
             theta = args[-1]
+
+            # Return the unpack parameters.
+            return time_vars, mp, sp, sigma, theta
+        # _end_def_
+
+        def _l96_En(t, *args):
+
+            # State vector dimensions.
+            D = self.dim_d
+
+            # Unpack the arguments.
+            time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
 
             # Collect all the function values in this list.
             f_values = []
@@ -310,25 +322,8 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
-            # The first seven variables are the fixed time-points.
-            i0 = 7
-
-            # Time related variables.
-            time_vars = args[0:i0]
-
-            # Extract the mean points.
-            i1 = i0 + (D * 4)
-            mp = _reshape(args[i0: i1], (D, 4), order='C')
-
-            # Extract the variance points.
-            i2 = i1 + (D * 3)
-            sp = _reshape(args[i1: i2], (D, 3), order='C')
-
-            # Extract the diffusion noise parameters.
-            sigma = array_t(args[i2: i2 + D])
-
-            # Extract the drift parameter.
-            theta = args[-1]
+            # Unpack the arguments.
+            time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
 
             # Collect all the function values in this list.
             f_values = []
@@ -378,25 +373,8 @@ class Lorenz96(StochasticProcess):
             # State vector dimensions.
             D = self.dim_d
 
-            # The first seven variables are the fixed time-points.
-            i0 = 7
-
-            # Time related variables.
-            time_vars = args[0:i0]
-
-            # Extract the mean points.
-            i1 = i0 + (D * 4)
-            mp = _reshape(args[i0: i1], (D, 4), order='C')
-
-            # Extract the variance points.
-            i2 = i1 + (D * 3)
-            sp = _reshape(args[i1: i2], (D, 3), order='C')
-
-            # Extract the diffusion noise parameters.
-            sigma = array_t(args[i2: i2 + D])
-
-            # Extract the drift parameter.
-            theta = args[-1]
+            # Unpack the arguments.
+            time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
 
             # Collect all the function values in this list.
             f_values = []
