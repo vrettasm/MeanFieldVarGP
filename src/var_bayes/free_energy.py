@@ -553,7 +553,7 @@ class FreeEnergy(object):
         dEobs_ds = np_full((self.dim_d, self.num_M),
                            0.5 * np.atleast_2d(Ri.diagonal()).T, dtype=float)
 
-        # Check for 1D systems.
+        # Check for 1D observations.
         if self.dim_d == 1:
 
             # Remove singleton dimensions on exit.
