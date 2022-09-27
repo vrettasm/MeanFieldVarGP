@@ -747,8 +747,12 @@ class FreeEnergy(object):
         # Stop the timer.
         time_tf = time.perf_counter()
 
+        # Extract the actual number of iterations.
+        num_it = scg_minimize.stats["nit"]
+
         # Print final duration in seconds.
-        print(f"Elapsed time: {(time_tf - time_t0):.2f} seconds.\n")
+        print(f"Elapsed time [{num_it}]: "
+              f"{(time_tf - time_t0):.2f} seconds.\n")
 
         # Check numerically the gradients.
         if check_gradients:
