@@ -1,7 +1,7 @@
 import time
 import numpy as np
-from numpy import zeros
 from numpy import full as np_full
+from numpy import zeros as zeros_t
 from numpy import array as array_t
 from numpy import reshape as reshape
 from numpy import squeeze as squeeze
@@ -440,8 +440,8 @@ class FreeEnergy(object):
         # Initialize the gradients arrays.
         # -> dEsde_dm := dEsde(tk)/dm(tk)
         # -> dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = zeros((L, 4*dim_D), dtype=float)
-        dEsde_ds = zeros((L, 3*dim_D), dtype=float)
+        dEsde_dm = zeros_t((L, 4*dim_D), dtype=float)
+        dEsde_ds = zeros_t((L, 3*dim_D), dtype=float)
 
         # Inverted diagonal noise vector.
         inv_sigma = np.atleast_1d(1.0 / self.sigma)
@@ -623,8 +623,8 @@ class FreeEnergy(object):
         # _end_if_
 
         # Put all gradients together.
-        Ecost_dm = zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
-        Ecost_ds = zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
+        Ecost_dm = zeros_t((self.dim_D, 3 * self.num_M + 4), dtype=float)
+        Ecost_ds = zeros_t((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
         # Copy the gradients of the first interval.
         Ecost_dm[:, 0:4] = dEsde_dm[0]
