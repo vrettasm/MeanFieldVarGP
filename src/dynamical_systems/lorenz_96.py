@@ -229,7 +229,7 @@ class Lorenz96(StochasticProcess):
         self.dEsde_ds.clear()
 
         @njit(inline="always")
-        def _circular_index(i: int, D: int) -> list:
+        def _circular_index(i: int, D: int) -> tuple:
             """
             Auxiliary function.
 
@@ -237,14 +237,14 @@ class Lorenz96(StochasticProcess):
 
             :param D: total (int) vector dimensions.
 
-            :return: the indexes [i, i+1, i-1, i-2]
+            :return: the indexes (i, i+1, i-1, i-2)
                      around a circular set of values
                      from 0 to D-1.
             """
-            return [i,
+            return (i,
                     np.mod(i + 1, D),
                     np.mod(i - 1, D),
-                    np.mod(i - 2, D)]
+                    np.mod(i - 2, D))
         # _end_def_
 
         @njit(inline="always")
