@@ -3,7 +3,7 @@ from numba import njit
 from pathlib import Path
 from dill import load as dl_load
 from numpy import array as array_t
-from numpy import empty as empty_t
+from numpy import zeros as zeros_t
 from dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -350,7 +350,7 @@ class Lorenz96(StochasticProcess):
                 _grad_dm = _func_dM(t, *param)
 
                 # Initialize temporary gradient.
-                _tmp_dm = empty_t(D * 4, dtype=float)
+                _tmp_dm = zeros_t(D * 4, dtype=float)
 
                 # Unroll the gradients.
                 for j, _ix in enumerate(idx):
@@ -401,7 +401,7 @@ class Lorenz96(StochasticProcess):
                 _grad_ds = _func_dS(t, *param)
 
                 # Initialize temporary gradient.
-                _tmp_ds = empty_t(D * 3, dtype=float)
+                _tmp_ds = zeros_t(D * 3, dtype=float)
 
                 # Unroll the gradients.
                 for j, _ix in enumerate(idx):
