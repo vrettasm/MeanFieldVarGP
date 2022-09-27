@@ -15,7 +15,7 @@ class SCG(object):
     value (thus we have less function calls).
     """
 
-    __slots__ = ("f", "nit", "x_tol", "f_tol", "display", "stats")
+    __slots__ = ("f", "max_it", "x_tol", "f_tol", "display", "stats")
 
     def __init__(self, func: callable, *args):
         """
@@ -44,7 +44,7 @@ class SCG(object):
         # _end_if_
 
         # Maximum number of iterations.
-        self.nit = p_list["max_it"] if "max_it" in p_list else 500
+        self.max_it = p_list["max_it"] if "max_it" in p_list else 500
 
         # Error tolerance in 'x'.
         self.x_tol = p_list["x_tol"] if "x_tol" in p_list else 1.0e-6
@@ -64,9 +64,9 @@ class SCG(object):
         """
         Maximum number of iterations.
 
-        :return: the 'nit' parameter.
+        :return: the 'max_it' parameter.
         """
-        return self.nit
+        return self.max_it
 
     # _end_def_
 
@@ -126,8 +126,8 @@ class SCG(object):
         self.stats = None
 
         # Local dictionary with statistical information.
-        _stats = {"MaxIt": self.nit, "fx": np.zeros(self.nit, dtype=float),
-                  "dfx": np.zeros(self.nit, dtype=float), "func_eval": 0}
+        _stats = {"nit": self.max_it, "fx": np.zeros(self.max_it, dtype=float),
+                  "dfx": np.zeros(self.max_it, dtype=float), "func_eval": 0}
 
         @njit(fastmath=True)
         def _fast_sum_abs(x_in: array_t):
@@ -198,7 +198,7 @@ class SCG(object):
         time_t0 = perf_counter()
 
         # Main optimization loop.
-        for j in range(self.nit):
+        for j in range(self.max_it):
 
             # Calculate 1-st and 2-nd
             # directional derivatives.
@@ -220,7 +220,7 @@ class SCG(object):
                     fx = f_now
 
                     # Update the statistic.
-                    _stats["MaxIt"] = j+1
+                    _stats["nit"] = j + 1
 
                     # Update object stats.
                     self.stats = _stats
@@ -326,7 +326,7 @@ class SCG(object):
                     fx = f_new
 
                     # Update the statistic.
-                    _stats["MaxIt"] = j + 1
+                    _stats["nit"] = j + 1
 
                     # Update object stats.
                     self.stats = _stats
@@ -352,7 +352,7 @@ class SCG(object):
                         fx = f_now
 
                         # Update the statistic.
-                        _stats["MaxIt"] = j + 1
+                        _stats["nit"] = j + 1
 
                         # Update object stats.
                         self.stats = _stats
@@ -390,7 +390,7 @@ class SCG(object):
         # _end_for_
 
         # Display a final (warning) to the user.
-        print(f"SGC: Maximum number of iterations ({self.nit}) has been reached.")
+        print(f"SGC: Maximum number of iterations ({self.max_it}) has been reached.")
 
         # Here we have reached the maximum number of iterations.
         fx = f_old
@@ -412,7 +412,7 @@ class SCG(object):
         """
 
         return f"SCG Id({id(self)}): "\
-               f"Function={self.f}, Max-It={self.nit}, " \
+               f"Function={self.f}, Max-It={self.max_it}, " \
                f"x_tol={self.x_tol}, f_tol={self.f_tol}"
     # _end_def_
 
