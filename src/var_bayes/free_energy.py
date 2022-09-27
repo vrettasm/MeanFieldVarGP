@@ -547,8 +547,7 @@ class FreeEnergy(object):
         # >> dEobs(k)/dm(k) := -H'*Ri*(yk-h(xk))
         dEobs_dm = -Ri.dot(Y_minus_Hm)
 
-        # Note that the dEobs(k)/ds(k) is identical
-        # for all observations.
+        # Note that the dEobs(k)/ds(k) is identical for all observations.
         # >> dEobs(k)/ds(k) := 0.5*diag(H'*Ri*H)
         dEobs_ds = np_full((self.dim_d, self.num_M),
                            0.5 * np.atleast_2d(Ri.diagonal()).T, dtype=float)
