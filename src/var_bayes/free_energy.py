@@ -2,6 +2,7 @@ import time
 import numpy as np
 from numpy import full as np_full
 from numpy import zeros as zeros_t
+from numpy import empty as empty_t
 from numpy import array as array_t
 from numpy import reshape as reshape
 from numpy import squeeze as squeeze
@@ -437,12 +438,6 @@ class FreeEnergy(object):
         # (between the observations).
         L = obs_times.size - 1
 
-        # Initialize the gradients arrays.
-        # -> dEsde_dm := dEsde(tk)/dm(tk)
-        # -> dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = zeros_t((L, 4*dim_D), dtype=float)
-        dEsde_ds = zeros_t((L, 3*dim_D), dtype=float)
-
         # Inverted diagonal noise vector.
         inv_sigma = np.atleast_1d(1.0 / self.sigma)
 
@@ -462,6 +457,12 @@ class FreeEnergy(object):
 
         # Initialize energy for the SDE.
         Esde = 0.0
+
+        # Initialize the gradients arrays.
+        # -> dEsde_dm := dEsde(tk)/dm(tk)
+        # -> dEsde_ds := dEsde(tk)/ds(tk)
+        dEsde_dm = empty_t((L, 4 * dim_D), dtype=float)
+        dEsde_ds = empty_t((L, 3 * dim_D), dtype=float)
 
         # Extract all the result from the parallel run.
         # NOTE: The order of the results matters in the
