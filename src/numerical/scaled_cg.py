@@ -307,8 +307,8 @@ class SCG(object):
                 time_tj = perf_counter()
 
                 # Print the current info.
-                print(f"It= {j:>5}: F(x)= {f_now:.3E} -/- "
-                      f"Sum(Gradients)= {total_grad:.3E} -/- "
+                print(f"It= {j:>5}: F(x)= {f_now:.3E} -:- "
+                      f"Sum(Gradients)= {total_grad:.3E} -:- "
                       f"Delta(Elapsed)= {time_tj-time_t0:.2f} sec.")
 
                 # Assign the current time to 't0'.
