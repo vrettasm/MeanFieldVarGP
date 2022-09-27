@@ -553,14 +553,18 @@ class FreeEnergy(object):
         dEobs_ds = np_full((self.dim_d, self.num_M),
                            0.5 * np.atleast_2d(Ri.diagonal()).T, dtype=float)
 
-        # Remove singleton dimensions.
+        # Check for 1D systems.
         if self.dim_d == 1:
-            dEobs_dm = squeeze(dEobs_dm)
-            dEobs_ds = squeeze(dEobs_ds)
+
+            # Remove singleton dimensions on exit.
+            return 0.5 * Eobs,\
+                   squeeze(dEobs_dm),\
+                   squeeze(dEobs_ds)
+
         # _end_if_
 
-        # Return the total observation energy
-        # and its gradients.
+        # Or, return the total observation energy
+        # and its gradients (unchanged) from here.
         return 0.5 * Eobs, dEobs_dm, dEobs_ds
     # _end_def_
 
