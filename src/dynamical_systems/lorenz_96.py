@@ -8,25 +8,6 @@ from dynamical_systems.stochastic_process import StochasticProcess
 
 
 @njit
-def circular_index(i: int, D: int) -> list:
-    """
-    Auxiliary function.
-
-    :param i: index (int) in circular vector.
-
-    :param D: total (int) vector dimensions.
-
-    :return: the indexes [i, i+1, i-1, i-2]
-             around a circular set of values
-             from 0 to D-1.
-    """
-    return [i,
-            np.mod(i + 1, D),
-            np.mod(i - 1, D),
-            np.mod(i - 2, D)]
-# _end_def_
-
-@njit
 def _l96(x: array_t, u: array_t) -> array_t:
     """
     Auxiliary Lorenz 96 model function.
@@ -247,7 +228,26 @@ class Lorenz96(StochasticProcess):
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
 
-        @njit
+        @njit(inline="always")
+        def _circular_index(i: int, D: int) -> list:
+            """
+            Auxiliary function.
+
+            :param i: index (int) in circular vector.
+
+            :param D: total (int) vector dimensions.
+
+            :return: the indexes [i, i+1, i-1, i-2]
+                     around a circular set of values
+                     from 0 to D-1.
+            """
+            return [i,
+                    np.mod(i + 1, D),
+                    np.mod(i - 1, D),
+                    np.mod(i - 2, D)]
+        # _end_def_
+
+        @njit(inline="always")
         def _unpack_args(D: int, args: array_t):
             """
             Local function that unpacks the list of arguments.
@@ -292,7 +292,7 @@ class Lorenz96(StochasticProcess):
             f_values_append = f_values.append
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(circular_index(np.arange(D), D))
+            circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -332,7 +332,7 @@ class Lorenz96(StochasticProcess):
             f_values_append = f_values.append
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(circular_index(np.arange(D), D))
+            circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -383,7 +383,7 @@ class Lorenz96(StochasticProcess):
             f_values_append = f_values.append
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(circular_index(np.arange(D), D))
+            circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
 
             # Iterate through all the system dimensions.
             for i in range(D):
