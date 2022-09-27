@@ -57,6 +57,7 @@ class SCG(object):
 
         # Statistics dictionary.
         self.stats = None
+
     # _end_def_
 
     @property
@@ -122,13 +123,6 @@ class SCG(object):
                  2) fx: the function value (at the minimum point)
         """
 
-        # Reset the stats in the object.
-        self.stats = None
-
-        # Local dictionary with statistical information.
-        _stats = {"nit": self.max_it, "fx": np.zeros(self.max_it, dtype=float),
-                  "dfx": np.zeros(self.max_it, dtype=float), "func_eval": 0}
-
         @njit(fastmath=True)
         def _fast_sum_abs(x_in: array_t):
             """
@@ -139,12 +133,15 @@ class SCG(object):
             :return: a much faster version of sum(abs(.)).
             """
             return np.sum(np.abs(x_in))
+
         # _end_def_
 
-        # Check for verbosity.
-        if self.display:
-            print("SCG: Optimization started ...")
-        # _end_if_
+        # Reset the stats in the object.
+        self.stats = None
+
+        # Local dictionary with statistical information.
+        _stats = {"nit": self.max_it, "fx": np.zeros(self.max_it, dtype=float),
+                  "dfx": np.zeros(self.max_it, dtype=float), "func_eval": 0}
 
         # Localize 'f'.
         func = self.f
@@ -193,6 +190,11 @@ class SCG(object):
 
         # Get the machine precision constant.
         eps_float = np.finfo(float).eps
+
+        # Check for verbosity.
+        if self.display:
+            print("SCG: Optimization started ...")
+        # _end_if_
 
         # Start the timer.
         time_t0 = perf_counter()
@@ -413,7 +415,7 @@ class SCG(object):
 
         return f"SCG Id({id(self)}): "\
                f"Function={self.f}, Max-It={self.max_it}, " \
-               f"x_tol={self.x_tol}, f_tol={self.f_tol}"
+               f"x-tol={self.x_tol}, f-tol={self.f_tol}"
     # _end_def_
 
 # _end_class_
