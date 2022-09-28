@@ -245,7 +245,7 @@ class SCG(object):
                 x_plus = x + (sigma * d)
 
                 # We evaluate the df(x_plus).
-                _, g_plus = func(x_plus)
+                _, g_plus = func(x_plus, *args)
 
                 # Increase function evaluations.
                 _stats["func_eval"] += 1
@@ -270,7 +270,7 @@ class SCG(object):
             # Evaluate fx and dfx at the new point.
             # NOTE: Because we haven't accepted yet this position as the
             # next 'x' state, we use the 'g_now' to store the gradient.
-            f_new, g_now = func(x_new)
+            f_new, g_now = func(x_new, *args)
 
             # Note that the gradient is computed anyway.
             _stats["func_eval"] += 1
