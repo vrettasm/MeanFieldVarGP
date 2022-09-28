@@ -375,36 +375,36 @@ class FreeEnergy(object):
 
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
-        Esde = quad_vec(lambda t: drift_func(t, *params), ti, tj,
+        i_En = quad_vec(lambda t: drift_func(t, *params), ti, tj,
                         limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-        integral_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
-                                   limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        i_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
+                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-        integral_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
-                                   limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        i_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
+                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
         # Sanity check.
         if inv_sigma.size == 1:
 
             # Remove singleton dimension.
-            Esde = squeeze(inv_sigma*Esde)
+            Esde = squeeze(inv_sigma*i_En)
 
             # This way we avoid errors in 1D systems.
-            dEsde_dm = inv_sigma*integral_dEn_dm
-            dEsde_ds = inv_sigma*integral_dEn_ds
+            dEsde_dm = inv_sigma*i_dEn_dm
+            dEsde_ds = inv_sigma*i_dEn_ds
 
         else:
 
             # Scale everything with inverse noise.
-            Esde = inv_sigma.dot(Esde)
+            Esde = inv_sigma.dot(i_En)
 
             # NOTE: the correct dimensions are (D x 4).
-            dEsde_dm = inv_sigma.dot(integral_dEn_dm)
+            dEsde_dm = inv_sigma.dot(i_dEn_dm)
 
             # NOTE: the correct dimensions are (D x 3).
-            dEsde_ds = inv_sigma.dot(integral_dEn_ds)
+            dEsde_ds = inv_sigma.dot(i_dEn_ds)
 
         # _end_if_
 
