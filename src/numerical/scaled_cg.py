@@ -13,6 +13,11 @@ class SCG(object):
     The minimisation process uses also the gradient df(x)/dx. To speed up the
     process, the input function return this gradient, along with the function
     value (thus we have less function calls).
+
+    The algorithm is based on the research paper:
+
+    - M. F. Moller (1993). "A scaled conjugate gradient algorithm for fast
+    supervised learning". Neural Networks, Volume 6, Issue 4, pp:525-533.
     """
 
     __slots__ = ("f", "max_it", "x_tol", "f_tol", "display", "stats")
