@@ -116,9 +116,23 @@ class SCG(object):
 
     # _end_def_
 
-    def __call__(self, x0: array_t, *args):
+    @staticmethod
+    @njit(fastmath=True)
+    def fast_sum_abs(x_in: array_t) -> float:
         """
-        The call of the object itself will start the optimization.
+        Numba version of numpy functions.
+
+        :param x_in: input array (dim,)
+
+        :return: a much faster version of sum(abs(.)).
+        """
+        return np.sum(np.abs(x_in))
+    # _end_def_
+
+    def minimize(self, x0: array_t, *args):
+        """
+        Performs the minimization of the cost function
+        "f" from a given starting point "x0".
 
         :param x0: Initial search point.
 
@@ -127,19 +141,6 @@ class SCG(object):
         :return: 1)  x: the point where the minimum was found
                  2) fx: the function value (at the minimum point)
         """
-
-        @njit(fastmath=True)
-        def _fast_sum_abs(x_in: array_t):
-            """
-            Nested numba version of numpy functions.
-
-            :param x_in: input array (dim,)
-
-            :return: a much faster version of sum(abs(.)).
-            """
-            return np.sum(np.abs(x_in))
-
-        # _end_def_
 
         # Reset the stats in the object.
         self.stats = None
@@ -150,6 +151,9 @@ class SCG(object):
 
         # Localize 'f'.
         func = self.f
+
+        # Localize fast_sum_abs.
+        _fast_sum_abs = SCG.fast_sum_abs
 
         # Localize function.
         _copy_to = np.copyto
@@ -407,6 +411,14 @@ class SCG(object):
 
         # Exit from here.
         return x, fx
+    # _end_def_
+
+    def __call__(self, *args, **kwargs):
+        """
+        This is only a WRAPPER of the "minimize"
+        method.
+        """
+        return self.minimize(*args, **kwargs)
     # _end_def_
 
     def __str__(self):
