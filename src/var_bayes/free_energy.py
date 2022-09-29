@@ -375,7 +375,7 @@ class FreeEnergy(object):
 
         # We use the lambda functions here to fix all the
         # additional input parameters except the time "t".
-        i_Energy = quad_vec(lambda t: energy_func(t, *params), ti, tj,
+        i_En_sde = quad_vec(lambda t: energy_func(t, *params), ti, tj,
                             limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Solve the integrals of dEsde(t)/dMp in [ti, tj].
@@ -390,7 +390,7 @@ class FreeEnergy(object):
         if inv_sigma.size == 1:
 
             # Remove singleton dimension.
-            Esde = squeeze(inv_sigma*i_Energy)
+            Esde = squeeze(inv_sigma*i_En_sde)
 
             # This way we avoid errors in 1D systems.
             dEsde_dm = inv_sigma*i_dEn_dm
@@ -399,7 +399,7 @@ class FreeEnergy(object):
         else:
 
             # Scale everything with inverse noise.
-            Esde = inv_sigma.dot(i_Energy)
+            Esde = inv_sigma.dot(i_En_sde)
 
             # NOTE: the correct dimensions are (D x 4).
             dEsde_dm = inv_sigma.dot(i_dEn_dm)
