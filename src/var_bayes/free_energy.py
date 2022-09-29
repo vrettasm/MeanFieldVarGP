@@ -320,7 +320,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @staticmethod
-    def single_interval(n_th: int, ti: float, tj: float, drift_func: callable, gradMP_func: callable,
+    def single_interval(n_th: int, ti: float, tj: float, energy_func: callable, gradMP_func: callable,
                         gradSP_func: callable, mean_pts: array_t, vars_pts: array_t, sigma: array_t,
                         theta: array_t, inv_sigma: array_t):
         """
@@ -334,7 +334,7 @@ class FreeEnergy(object):
 
         :param tj: this is the second limit of integration in the [ti, tj] interval.
 
-        :param drift_func: this is the Esde (drift) function.
+        :param energy_func: this is the Esde (energy) function.
 
         :param gradMP_func: this is the dEsde_dm function.
 
@@ -373,23 +373,30 @@ class FreeEnergy(object):
                   *vars_pts.ravel(order='C'),
                   *sigma, *theta)
 
-        # We use the lambda functions here to fix all the
-        # additional input parameters except the time "t".
-        i_En = quad_vec(lambda t: drift_func(t, *params), ti, tj,
-                        limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        # Compute (numerically) all the integrals functions in one call.
+        integrals = quad_vec(lambda t: array_t([*energy_func(t, *params),
+                                                *gradMP_func(t, *params).ravel(),
+                                                *gradSP_func(t, *params).ravel()]),
+                             ti, tj, limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
-        # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-        i_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
-                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        # Get the system dimensions.
+        D = inv_sigma.size
 
-        # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-        i_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
-                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
-        # Sanity check.
-        if inv_sigma.size == 1:
+        # Compute the indexes of the integrals.
+        i0, i1 = 0, D
+        i2 = i1 + (D * D * 4)
+        i3 = i2 + (D * D * 3)
+
+        # Check for 1D systems.
+        if D == 1:
+
+            # Extract the values.
+            i_Energy = integrals[i0:i1]
+            i_dEn_dm = integrals[i1:i2]
+            i_dEn_ds = integrals[i2:i3]
 
             # Remove singleton dimension.
-            Esde = squeeze(inv_sigma*i_En)
+            Esde = squeeze(inv_sigma*i_Energy)
 
             # This way we avoid errors in 1D systems.
             dEsde_dm = inv_sigma*i_dEn_dm
@@ -397,8 +404,13 @@ class FreeEnergy(object):
 
         else:
 
+            # Extract the values.
+            i_Energy = integrals[i0:i1]
+            i_dEn_dm = integrals[i1:i2].reshape(D, D*4)
+            i_dEn_ds = integrals[i2:i3].reshape(D, D*3)
+
             # Scale everything with inverse noise.
-            Esde = inv_sigma.dot(i_En)
+            Esde = inv_sigma.dot(i_Energy)
 
             # NOTE: the correct dimensions are (D x 4).
             dEsde_dm = inv_sigma.dot(i_dEn_dm)
