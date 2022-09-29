@@ -285,11 +285,8 @@ class Lorenz96(StochasticProcess):
             # Unpack the arguments.
             time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
 
-            # Collect all the function values in this list.
-            f_values = []
-
-            # Localize append method.
-            f_values_append = f_values.append
+            # Collect all the function values in this array.
+            f_values = zeros_t(D, dtype=float)
 
             # Get ALL the circular indexes first.
             circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
@@ -307,10 +304,10 @@ class Lorenz96(StochasticProcess):
                          *sigma[idx], theta)
 
                 # Add the function value to the list.
-                f_values_append(_func_En(t, *param))
+                f_values[i] = _func_En(t, *param)
             # _end_for_
 
-            # Return the list.
+            # Return the array.
             return f_values
         # _end_def_
 
@@ -325,11 +322,8 @@ class Lorenz96(StochasticProcess):
             # Unpack the arguments.
             time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
 
-            # Collect all the function values in this list.
-            f_values = []
-
-            # Localize append method.
-            f_values_append = f_values.append
+            # Collect all the gradient values in this array.
+            f_values = zeros_t((D, D * 4), dtype=float)
 
             # Get ALL the circular indexes first.
             circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
@@ -349,19 +343,14 @@ class Lorenz96(StochasticProcess):
                 # Get the list of gradients.
                 _grad_dm = _func_dM(t, *param)
 
-                # Initialize temporary gradient.
-                _tmp_dm = zeros_t(D * 4, dtype=float)
-
                 # Unroll the gradients.
                 for j, _ix in enumerate(idx):
-                    _tmp_dm[4*_ix: 4*(_ix + 1)] = _grad_dm[4*j: 4*(j + 1)]
+                    f_values[i, 4*_ix: 4*(_ix + 1)] = _grad_dm[4*j: 4*(j + 1)]
                 # _end_for_
 
-                # Add the gradient array.
-                f_values_append(_tmp_dm)
             # _end_for_
 
-            # Return the list.
+            # Return the array.
             return f_values
         # _end_def_
 
@@ -376,11 +365,8 @@ class Lorenz96(StochasticProcess):
             # Unpack the arguments.
             time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
 
-            # Collect all the function values in this list.
-            f_values = []
-
-            # Localize append method.
-            f_values_append = f_values.append
+            # Collect all the gradient values in this array.
+            f_values = zeros_t((D, D * 3), dtype=float)
 
             # Get ALL the circular indexes first.
             circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
@@ -400,19 +386,14 @@ class Lorenz96(StochasticProcess):
                 # Get the list of gradients.
                 _grad_ds = _func_dS(t, *param)
 
-                # Initialize temporary gradient.
-                _tmp_ds = zeros_t(D * 3, dtype=float)
-
                 # Unroll the gradients.
                 for j, _ix in enumerate(idx):
-                    _tmp_ds[3*_ix: 3*(_ix + 1)] = _grad_ds[3*j: 3*(j + 1)]
+                    f_values[i, 3*_ix: 3*(_ix + 1)] = _grad_ds[3*j: 3*(j + 1)]
                 # _end_for_
 
-                # Add the gradient array.
-                f_values_append(_tmp_ds)
             # _end_for_
 
-            # Return the list.
+            # Return the array.
             return f_values
         # _end_def_
 
