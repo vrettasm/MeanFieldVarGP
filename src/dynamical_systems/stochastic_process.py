@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import squeeze
 from numpy import array as array_t
 from numpy.random import default_rng
 
@@ -341,11 +342,18 @@ class StochasticProcess(object):
         :return: Esde vector (dim_D,).
         """
 
-        # Collect all energy values (from all dimensions).
-        energy_vec = [eF_(t, *args) for eF_ in self.Esde]
+        # Collect all the energy values.
+        energy_vec = array_t([eF_(t, *args) for eF_ in self.Esde])
 
-        # Return the list as numpy array (float).
-        return array_t(energy_vec, dtype=float)
+        # Sanity check.
+        if energy_vec.ndim > 1:
+
+            # Remove singleton dimensions.
+            energy_vec = squeeze(energy_vec)
+        # _end_if_
+
+        # Return the vector.
+        return energy_vec
     # _end_def_
 
     def grad_mean(self, t, *args):
@@ -384,11 +392,19 @@ class StochasticProcess(object):
         :return: dEsde_dm vector (4*dim_D,).
         """
 
-        # List of gradient values.
-        grad_vec = [gM_(t, *args) for gM_ in self.dEsde_dm]
+        # Collect all the (mean) gradient values.
+        grad_vec = array_t([gM_(t, *args) for gM_ in self.dEsde_dm])
 
-        # Return the list as numpy array (float).
-        return array_t(grad_vec, dtype=float)
+        # Sanity check.
+        if grad_vec.ndim > 2:
+
+            # Remove singleton dimensions.
+            grad_vec = squeeze(grad_vec)
+
+        # _end_if_
+
+        # Return the vector.
+        return grad_vec
     # _end_def_
 
     def grad_variance(self, t, *args):
@@ -427,11 +443,19 @@ class StochasticProcess(object):
         :return: dEsde_ds vector (3*dim_D,).
         """
 
-        # List of gradient values.
-        grad_vec = [gS_(t, *args) for gS_ in self.dEsde_ds]
+        # Collect all the (variance) gradient values.
+        grad_vec = array_t([gS_(t, *args) for gS_ in self.dEsde_ds])
 
-        # Return the list as numpy array (float).
-        return array_t(grad_vec, dtype=float)
+        # Sanity check.
+        if grad_vec.ndim > 2:
+
+            # Remove singleton dimensions.
+            grad_vec = squeeze(grad_vec)
+
+        # _end_if_
+
+        # Return the vector.
+        return grad_vec
     # _end_def_
 
 # _end_class_
