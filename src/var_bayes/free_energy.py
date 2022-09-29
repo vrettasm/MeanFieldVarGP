@@ -373,27 +373,21 @@ class FreeEnergy(object):
                   *vars_pts.ravel(order='C'),
                   *sigma, *theta)
 
-        # Compute (numerically) all the integrals functions in one call.
-        integrals = quad_vec(lambda t: array_t([*energy_func(t, *params),
-                                                *gradMP_func(t, *params).ravel(),
-                                                *gradSP_func(t, *params).ravel()]),
-                             ti, tj, limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        # We use the lambda functions here to fix all the
+        # additional input parameters except the time "t".
+        i_Energy = quad_vec(lambda t: energy_func(t, *params), ti, tj,
+                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
-        # Get the system dimensions.
-        D = inv_sigma.size
+        # Solve the integrals of dEsde(t)/dMp in [ti, tj].
+        i_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
+                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
-        # Compute the indexes of the integrals.
-        i0, i1 = 0, D
-        i2 = i1 + (D * D * 4)
-        i3 = i2 + (D * D * 3)
+        # Solve the integrals of dEsde(t)/dSp in [ti, tj].
+        i_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
+                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
         # Check for 1D systems.
-        if D == 1:
-
-            # Extract the values.
-            i_Energy = integrals[i0:i1]
-            i_dEn_dm = integrals[i1:i2]
-            i_dEn_ds = integrals[i2:i3]
+        if inv_sigma.size == 1:
 
             # Remove singleton dimension.
             Esde = squeeze(inv_sigma*i_Energy)
@@ -403,11 +397,6 @@ class FreeEnergy(object):
             dEsde_ds = inv_sigma*i_dEn_ds
 
         else:
-
-            # Extract the values.
-            i_Energy = integrals[i0:i1]
-            i_dEn_dm = integrals[i1:i2].reshape(D, D*4)
-            i_dEn_ds = integrals[i2:i3].reshape(D, D*3)
 
             # Scale everything with inverse noise.
             Esde = inv_sigma.dot(i_Energy)
