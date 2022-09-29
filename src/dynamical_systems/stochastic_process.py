@@ -346,8 +346,7 @@ class StochasticProcess(object):
         energy_vec = [eF_(t, *args) for eF_ in self.Esde]
 
         # Return the list as numpy array (float).
-        # Also remove any singleton dimensions.
-        return squeeze(array_t(energy_vec, dtype=float))
+        return array_t(energy_vec, dtype=float)
     # _end_def_
 
     def grad_mean(self, t, *args):
@@ -390,8 +389,7 @@ class StochasticProcess(object):
         grad_vec = [gM_(t, *args) for gM_ in self.dEsde_dm]
 
         # Return the list as numpy array (float).
-        # Also remove any singleton dimensions.
-        return squeeze(array_t(grad_vec, dtype=float))
+        return array_t(grad_vec, dtype=float)
     # _end_def_
 
     def grad_variance(self, t, *args):
@@ -434,8 +432,7 @@ class StochasticProcess(object):
         grad_vec = [gS_(t, *args) for gS_ in self.dEsde_ds]
 
         # Return the list as numpy array (float).
-        # Also remove any singleton dimensions.
-        return squeeze(array_t(grad_vec, dtype=float))
+        return array_t(grad_vec, dtype=float)
     # _end_def_
 
 # _end_class_
