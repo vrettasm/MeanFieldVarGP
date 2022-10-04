@@ -243,7 +243,7 @@ def unscented_approximation(fun, x_bar, x_cov, *args):
     # Compute the weights.
     w_list = [k / (dim_d + k)]
     w_list.extend([1.0 / (2.0 * (dim_d + k))] * (dim_m - 1))
-    weights = np.reshape(np.array(w_list), (1, dim_m))
+    weights = np.reshape(array_t(w_list), (1, dim_m))
 
     # Propagate the new points through
     # the non-linear transformation.
