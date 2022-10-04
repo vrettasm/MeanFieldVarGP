@@ -27,14 +27,17 @@ class TestScaledCG(unittest.TestCase):
         :return: None.
         """
 
-        # Create the test rng with fixed seed.
+        # Create the test with fixed seed.
         self.rng = default_rng(seed=795)
+
+        # Fix the 'eps' here.
+        self.eps = np.finfo(float).eps
 
     # _end_def_
 
     def test_sphere_func(self):
         """
-        Test the Sphere Function (n>=1).
+        Test the Sphere Function (n >= 1).
 
             f(x) = \Sum_{i=1}^{n} x_i^2
 
@@ -49,7 +52,7 @@ class TestScaledCG(unittest.TestCase):
 
         # Gradient (numerical).
         df = lambda xk: approx_fprime(xk=xk, f=f,
-                                      epsilon=np.finfo(float).eps)
+                                      epsilon=self.eps)
         # Function to minimize.
         func = lambda x: (f(x), df(x))
 
@@ -85,7 +88,7 @@ class TestScaledCG(unittest.TestCase):
 
         # Gradient (numerical).
         df = lambda xk: approx_fprime(xk=xk, f=f,
-                                      epsilon=np.finfo(float).eps)
+                                      epsilon=self.eps)
         # Function to minimize.
         func = lambda x: (f(x), df(x))
 
