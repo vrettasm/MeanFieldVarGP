@@ -66,10 +66,12 @@ class TestScaledCG(unittest.TestCase):
         x_opt, fx_opt = optim_fun(x0)
 
         # The global minimum should be zero.
-        self.assertTrue(np.allclose(fx_opt, 0.0))
+        self.assertTrue(np.allclose(fx_opt, 0.0),
+                        msg="The global minimum should be zero.")
 
         # Also, the position 'x' should be zero.
-        self.assertTrue(np.allclose(x_opt, 0.0, atol=1.0e-4))
+        self.assertTrue(np.allclose(x_opt, 0.0, atol=1.0e-4),
+                        msg="The minimum should be found at 0.")
     # _end_def_
 
     def test_rosenbrock_fun(self):
@@ -102,10 +104,12 @@ class TestScaledCG(unittest.TestCase):
         x_opt, fx_opt = optim_fun(x0)
 
         # The global minimum should be zero.
-        self.assertTrue(np.allclose(fx_opt, 0.0))
+        self.assertTrue(np.allclose(fx_opt, 0.0),
+                        msg="The global minimum should be zero.")
 
         # The position 'x' should be one.
-        self.assertTrue(np.abs(x_opt - 1.0).max() < 1.0E-3)
+        self.assertTrue(np.abs(x_opt - 1.0).max() < 1.0E-3,
+                        msg="The minimum should be found at 1.")
     # _end_def_
 
 
