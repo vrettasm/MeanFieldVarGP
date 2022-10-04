@@ -130,6 +130,16 @@ class StochasticProcess(object):
     # _end_def_
 
     @property
+    def inverse_sigma(self):
+        """
+        Accessor method (getter).
+
+        :return: the inverse of diffusion noise parameter.
+        """
+        return 1.0 / self.sigma
+    # _end_def_
+
+    @property
     def sample_path(self):
         """
         Accessor method.

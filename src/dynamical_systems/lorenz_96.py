@@ -102,16 +102,6 @@ class Lorenz96(StochasticProcess):
 
     # _end_def_
 
-    @property
-    def inverse_sigma(self):
-        """
-        Accessor method.
-
-        :return: the inverse of diffusion noise parameter.
-        """
-        return 1.0 / self.sigma
-    # _end_def_
-
     def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
         """
         Generates a realizations of the Lorenz96 dynamical system within
