@@ -1,5 +1,7 @@
 import unittest
 
+import numpy as np
+
 # Import custom code
 from src.dynamical_systems.stochastic_process import StochasticProcess
 
@@ -88,6 +90,43 @@ class TestStochasticProcess(unittest.TestCase):
         # This should be equal.
         self.assertEqual(int('113219229968428971613983651843996252106'),
                          state)
+    # _end_def_
+
+    def test_sigma_accessor(self) -> None:
+        """
+        Make sure the sigma accessor does not accept zeros
+        or negative values. It represents variance, hence
+        it should only contain positive values.
+
+        :return: None
+        """
+
+        # Because the order of the execution should not matter
+        # we can't use the self.test_obj here, to avoid failing
+        # the other tests.
+        local_obj = StochasticProcess()
+
+        # Negative variance should not be allowed.
+        with self.assertRaises(ValueError):
+            local_obj.sigma = -1.0
+        # _end_with_
+
+        # Negative and zero variances should not be allowed.
+        with self.assertRaises(ValueError):
+            local_obj.sigma = [0.0, -1.0]
+        # _end_with_
+
+        # Zero variance should not be allowed.
+        with self.assertRaises(ValueError):
+            local_obj.sigma = [10.0, 0.0]
+        # _end_with_
+
+        # This assignment should be accepted.
+        local_obj.sigma = [10.0, 10.0]
+
+        # Make sure they are set properly.
+        self.assertTrue(np.array_equal(np.array([10.0, 10.0]),
+                                       local_obj.sigma))
     # _end_def_
 
 # _end_class_
