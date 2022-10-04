@@ -56,8 +56,8 @@ class TestScaledCG(unittest.TestCase):
         # Function to minimize.
         func = lambda x: (f(x), df(x))
 
-        # Initial random point.
-        x0 = self.rng.random(5)
+        # Initial random points in (-oo, +oo).
+        x0 = self.rng.standard_normal(5)
 
         # Create the SCG.
         optim_fun = SCG(func, {"max_it": 1000})
