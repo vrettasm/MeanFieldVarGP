@@ -123,8 +123,8 @@ class StochasticProcess(object):
             self._sigma = new_value
 
         else:
-            raise RuntimeError(f" {self.__class__.__name__}:"
-                               f" SDE noise vector {new_value} is not positive.")
+            raise ValueError(f" {self.__class__.__name__}:"
+                             f" SDE noise vector {new_value} is not positive.")
         # _end_if_
 
     # _end_def_
