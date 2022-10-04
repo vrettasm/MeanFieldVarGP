@@ -1,7 +1,7 @@
 import unittest
 
 # Import custom code
-from src.dynamical_systems.ornstein_uhlenbeck import OrnsteinUhlenbeck
+from dynamical_systems.ornstein_uhlenbeck import OrnsteinUhlenbeck
 
 
 class TestOrnsteinUhlenbeck(unittest.TestCase):

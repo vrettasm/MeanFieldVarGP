@@ -1,7 +1,7 @@
 import unittest
 
 # Import custom code
-from src.dynamical_systems.double_well import DoubleWell
+from dynamical_systems.double_well import DoubleWell
 
 
 class TestDoubleWell(unittest.TestCase):

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 # Import custom code
-from src.dynamical_systems.stochastic_process import StochasticProcess
+from dynamical_systems.stochastic_process import StochasticProcess
 
 
 class TestStochasticProcess(unittest.TestCase):

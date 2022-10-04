@@ -4,7 +4,7 @@ from numpy.random import default_rng
 from scipy.optimize import approx_fprime
 
 # Import custom code.
-from src.numerical.scaled_cg import SCG
+from numerical.scaled_cg import SCG
 
 
 class TestScaledCG(unittest.TestCase):

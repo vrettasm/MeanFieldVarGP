@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 # Import custom code
-from src.dynamical_systems.lorenz_63 import Lorenz63
+from dynamical_systems.lorenz_63 import Lorenz63
 
 
 class TestLorenz63(unittest.TestCase):
