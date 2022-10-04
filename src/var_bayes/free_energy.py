@@ -513,7 +513,7 @@ class FreeEnergy(object):
 
         # Sanity check.
         if isinstance(Qi, float):
-            Qi = np.array(Qi)
+            Qi = array_t(Qi)
         # _end_if_
 
         # Sanity check.
