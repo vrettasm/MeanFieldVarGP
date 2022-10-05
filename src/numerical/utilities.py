@@ -1,5 +1,8 @@
 import numpy as np
 from numba import njit
+from numpy import log as np_log
+from numpy import sum as np_sum
+from numpy import diag as np_diag
 from numpy import array as array_t
 from numpy.linalg import solve, cholesky
 
@@ -11,7 +14,7 @@ def _sum_log_diag_cholesky_(x: array_t):
 
     :param x: input array.
     """
-    return np.sum(np.log(np.diag(cholesky(x))))
+    return np_sum(np_log(np_diag(cholesky(x))))
 # _end_def_
 
 def log_det(x: array_t):
@@ -32,13 +35,13 @@ def log_det(x: array_t):
     # If the input is scalar.
     if x.ndim == 0:
         # Return from here with the log.
-        return np.log(x)
+        return np_log(x)
     # _end_if_
 
     # If the input is a 1-D vector.
     if x.ndim == 1:
         # Transform it to diagonal matrix.
-        x = np.diag(x)
+        x = np_diag(x)
     else:
         # Get the number of rows/cols.
         rows, cols = x.shape
@@ -87,7 +90,7 @@ def safe_log(x: array_t):
     x = np.maximum(np.minimum(x, 1.0E+300), 1.0E-300)
 
     # Return the log() of the filtered input.
-    return np.log(x)
+    return np_log(x)
 # _end_def_
 
 @njit(fastmath=True)
@@ -129,7 +132,7 @@ def cholesky_inv(x: array_t):
         if x.ndim == 1:
 
             # Convert it to diagonal matrix.
-            x = np.diag(x)
+            x = np_diag(x)
         # _end_if_
 
         return _cholesky_inv_fast_(x)
