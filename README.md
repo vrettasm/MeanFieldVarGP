@@ -84,6 +84,14 @@ model but with D=500. In this example we set the observations to 25% of the true
 (i.e. d=125). This system is very difficult to perform inference, since not only we have sparse
 observations in time, but we also have partially observed state vectors.
 
+## Unittests
+
+The included tests can be checked by running the following command from the '*/src*' directory:
+
+    $ python3 -m unittest discover -v
+
+**NOTE**: To run this command successfully all the required packages must have been installed properly.
+
 ### Contact
 
 For any questions / comments please contact me at: vrettasm@gmail.com
