@@ -216,6 +216,9 @@ class Lorenz96(StochasticProcess):
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
 
+        # State vector dimensions.
+        Dim = self.dim_D
+
         @njit(inline="always")
         def _circular_index(i: int, D: int) -> tuple:
             """
@@ -267,28 +270,25 @@ class Lorenz96(StochasticProcess):
 
         def _l96_En(t, *args):
 
-            # State vector dimensions.
-            D = self.dim_D
-
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(Dim, array_t(args))
 
             # Collect all the function values in this array.
-            f_values = zeros_t(D, dtype=float)
+            f_values = zeros_t(Dim, dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
+            circ_idx = array_t(_circular_index(np.arange(Dim), Dim), dtype=int)
 
             # Iterate through all the system dimensions.
-            for i in range(D):
+            for i in range(Dim):
 
                 # Get the indexes for the i-th dimension.
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
                 param = (*time_vars,
-                         *mp[idx, :].ravel(order='C'),
-                         *sp[idx, :].ravel(order='C'),
+                         *mp[idx, :].ravel(),
+                         *sp[idx, :].ravel(),
                          *sigma[idx], theta)
 
                 # Add the function value to the list.
@@ -304,28 +304,25 @@ class Lorenz96(StochasticProcess):
 
         def _l96_dEn_dm(t, *args):
 
-            # State vector dimensions.
-            D = self.dim_D
-
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(Dim, array_t(args))
 
             # Collect all the gradient values in this array.
-            f_values = zeros_t((D, D * 4), dtype=float)
+            f_values = zeros_t((Dim, Dim * 4), dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
+            circ_idx = array_t(_circular_index(np.arange(Dim), Dim), dtype=int)
 
             # Iterate through all the system dimensions.
-            for i in range(D):
+            for i in range(Dim):
 
                 # Get the indexes for the i-th dimension.
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
                 param = (*time_vars,
-                         *mp[idx, :].ravel(order='C'),
-                         *sp[idx, :].ravel(order='C'),
+                         *mp[idx, :].ravel(),
+                         *sp[idx, :].ravel(),
                          *sigma[idx], theta)
 
                 # Get the list of gradients.
@@ -347,28 +344,25 @@ class Lorenz96(StochasticProcess):
 
         def _l96_dEn_ds(t, *args):
 
-            # State vector dimensions.
-            D = self.dim_D
-
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(D, array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(Dim, array_t(args))
 
             # Collect all the gradient values in this array.
-            f_values = zeros_t((D, D * 3), dtype=float)
+            f_values = zeros_t((Dim, Dim * 3), dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(D), D), dtype=int)
+            circ_idx = array_t(_circular_index(np.arange(Dim), Dim), dtype=int)
 
             # Iterate through all the system dimensions.
-            for i in range(D):
+            for i in range(Dim):
 
                 # Get the indexes for the i-th dimension.
                 idx = circ_idx[:, i]
 
                 # Pack the input parameters.
                 param = (*time_vars,
-                         *mp[idx, :].ravel(order='C'),
-                         *sp[idx, :].ravel(order='C'),
+                         *mp[idx, :].ravel(),
+                         *sp[idx, :].ravel(),
                          *sigma[idx], theta)
 
                 # Get the list of gradients.
