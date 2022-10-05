@@ -16,8 +16,8 @@ of stochastic differential equations", Physical Review E. vol. 91, 2015, 012148.
 Equation (27) in the paper has a typo. There is an extra square in the denominator
 at the s(t). This was only in the paper as the code was done correctly. You can see
 this in the two examples below, on how to compute the energy terms. Also, a proof
-of the corrected equation can be found here [Note: 1](src/notes/PRE_Note_01.jpg)
-and here [Note: 2](src/notes/PRE_Note_02.jpg).
+of the corrected equation can be found here [Note: 1](notes/PRE_Note_01.jpg)
+and here [Note: 2](notes/PRE_Note_02.jpg).
 
 ## Expectations and gradients
 
@@ -32,8 +32,8 @@ These expressions can be computed in paper and then put into code. But here we p
 automated solution based on **SymPy**. We show how one can derive these expression and directly
 put them in code and use them. This is shown in two examples:
 
-1. [How to compute energies.](src/examples/how_to_compute_energies.ipynb)
-2. [How to compute integrals.](src/examples/how_to_compute_integrals.ipynb)
+1. [How to compute energies.](examples/how_to_compute_energies.ipynb)
+2. [How to compute integrals.](examples/how_to_compute_integrals.ipynb)
 
 **Note:** Even though the integrals can be computed in analytic form (at least for polynomial
 drift functions), one must be aware that the resulting expressions are "enormous" in size,
@@ -59,27 +59,27 @@ packages use:
 
 We provide five examples on how to use this method:
 
-1. [Double-Well (1D).](src/examples/example_DW.ipynb) The first one is a one-dimensional DW system.
+1. [Double-Well (1D).](examples/example_DW.ipynb) The first one is a one-dimensional DW system.
 Even though the mean-field algorithm is meant to be applied on high dimensional system, this 1D
 example here helps with debugging the algorithm at the early stages of development. For these low
 dimensional systems the original (full) [VGPA](https://github.com/vrettasm/VGPA) algorithm is preferred
 because it provides a one-dimensional version that makes everything much faster.
 
-2. [Ornstein-Uhlenbeck (1D).](src/examples/example_OU.ipynb) Another one-dimensional system that is
+2. [Ornstein-Uhlenbeck (1D).](examples/example_OU.ipynb) Another one-dimensional system that is
 well known and studied.
 
-3. [Lorenz '63 (3D).](src/examples/example_L63.ipynb) The third system considered is the chaotic
+3. [Lorenz '63 (3D).](examples/example_L63.ipynb) The third system considered is the chaotic
 Lorenz 1963 model (the butterfly model). Again, even though this is not very high dimensional
 it helps with ensuring that the code will perform as expected on more than 1D systems, in terms
 of matrix multiplications.
 
-4. [Lorenz '96 (40D)](src/examples/example_L96.ipynb) The fourth system provided here is a stochastic
+4. [Lorenz '96 (40D)](examples/example_L96.ipynb) The fourth system provided here is a stochastic
 version of the famous Lorenz 1996 model (minimal weather like model). The original paper describes
 a system with forty dimensions (D=40). But the cool thing is that since the system equations are
 in a circular framework the system can actually be extended to any number of dimensions (see the last
 example below).
 
-5. [Lorenz '96 (500D)](src/examples/example_500D.ipynb) The last system we used is the Lorenz '96
+5. [Lorenz '96 (500D)](examples/example_500D.ipynb) The last system we used is the Lorenz '96
 model but with D=500. In this example we set the observations to 25% of the true systems dimension
 (i.e. d=125). This system is very difficult to perform inference, since not only we have sparse
 observations in time, but we also have partially observed state vectors.
