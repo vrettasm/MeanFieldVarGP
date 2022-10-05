@@ -1,8 +1,18 @@
 import numpy as np
 from numba import njit
 from numpy import array as array_t
-from numpy.linalg import solve, cholesky, LinAlgError
+from numpy.linalg import solve, cholesky
 
+
+@njit(fastmath=True)
+def _sum_log_diag_cholesky_(x: array_t):
+    """
+    Helper function implemented with numba.
+
+    :param x: input array.
+    """
+    return np.sum(np.log(np.diag(cholesky(x))))
+# _end_def_
 
 def log_det(x: array_t):
     """
@@ -40,7 +50,7 @@ def log_det(x: array_t):
     # _end_if_
 
     # More stable than: log(det(x)).
-    return 2.0 * np.sum(np.log(cholesky(x).diagonal()))
+    return 2.0 * _sum_log_diag_cholesky_(x)
 # _end_def_
 
 @njit(fastmath=True)
@@ -80,70 +90,8 @@ def safe_log(x: array_t):
     return np.log(x)
 # _end_def_
 
-def my_trapezoid(fx: array_t, dx=1.0, obs_t=None):
-    """
-    This method computes the numerical integral
-    of the discrete function values 'fx', with
-    space increment dt, using the composite
-    trapezoidal rule.
-
-    This code applies the function: numpy.trapz()
-    between the times of the observations 'obs_t'. This is
-    because the function 'fx' is very rough (it jumps at
-    observation times), therefore computing the integral
-    incrementally we achieve better numerical results.
-
-    If no 'obs_t' is given, then we call directly trapz().
-
-    NOTE: to allow easy vectorization the input values 'fx',
-    assume that the first dimension is the one we are integrating
-    over. So:
-
-    1) if 'fx' is scalar (dim_n),
-    2) if 'fx' is vector (dim_n x dim_d),
-    3) if 'fx' is matrix (dim_n x dim_d x dim_d).
-    4) etc.
-
-    :param fx: function values (discrete) (dim_n).
-
-    :param dx: discrete step (time-wise) (scalar).
-
-    :param obs_t: observation times (indexes) - optional.
-
-    :return: definite integral as approximated by trapezoidal rule.
-    """
-
-    # Check if there are observation times (indexes).
-    if obs_t is None:
-        return np.trapz(fx, dx=dx, axis=0)
-    # _end_if_
-
-    # Total integral.
-    tot_area = 0.0
-
-    # First index.
-    f = 0
-
-    # Compute the integral partially.
-    for k, l in enumerate(obs_t):
-        # Compute the integral incrementally.
-        tot_area += np.trapz(fx[f:l+1], dx=dx, axis=0)
-
-        # Set the next first index.
-        f = obs_t[k]
-    # _end_for_
-
-    # Final interval.
-    if f != fx.shape[0] - 1:
-        tot_area += np.trapz(fx[f:], dx=dx, axis=0)
-    # _end_if_
-
-    # Return the total integral.
-    return tot_area
-# _end_def_
-
-@njit
-def cholesky_inv_fast(x: array_t):
+@njit(fastmath=True)
+def _cholesky_inv_fast_(x: array_t):
     """
     Helper function implemented with numba.
 
@@ -184,81 +132,7 @@ def cholesky_inv(x: array_t):
             x = np.diag(x)
         # _end_if_
 
-        return cholesky_inv_fast(x)
+        return _cholesky_inv_fast_(x)
     # _end_if_
 
-# _end_def_
-
-def unscented_approximation(fun, x_bar, x_cov, *args):
-    """
-    This method computes the approximate values for the mean and
-    the covariance of a multivariate random variable. To achieve
-    that, the "Unscented Transformation" (UT) is used.
-
-    Reference:
-    Simon J. Julier (1999). "The Scaled Unscented Transformation".
-    Conference Proceedings, pp.4555--4559
-
-    :param fun: function of the nonlinear transformation.
-
-    :param x_bar: current mean of the state vector (dim_d x 1).
-
-    :param x_cov: current covariance of the state vector (dim_d x dim_d).
-
-    :param args: additional parameter for the "fun" function.
-
-    :return: 1) y_bar : estimated mean after nonlinear transformation (dim_k x 1)
-             2) y_cov : estimated covariance after nonlinear transformation (dim_k x dim_k).
-    """
-
-    # Make sure input is arrays.
-    x_bar = np.asarray(x_bar)
-    x_cov = np.asarray(x_cov)
-
-    # Get the dimensions of the state vector.
-    dim_d = x_bar.size
-
-    # Total number of sigma points.
-    dim_m = int(2 * dim_d + 1)
-
-    # Scaling factor.
-    k = 1.05 * dim_d
-
-    # Use Cholesky to get the lower triangular matrix.
-    try:
-        sPxx = cholesky((dim_d + k) * x_cov).T
-    except LinAlgError:
-        # If the original fails, apply only to
-        # the diagonal elements of the covariance.
-        sPxx = cholesky(x_cov * np.eye(dim_d)).T
-    # _end_if_
-
-    # Replicate the array.
-    x_mat = np.tile(x_bar, (dim_d, 1))
-
-    # Put all sigma points together.
-    chi = np.concatenate((x_bar[np.newaxis, :],
-                          (x_mat + sPxx),
-                          (x_mat - sPxx)))
-    # Compute the weights.
-    w_list = [k / (dim_d + k)]
-    w_list.extend([1.0 / (2.0 * (dim_d + k))] * (dim_m - 1))
-    weights = np.reshape(array_t(w_list), (1, dim_m))
-
-    # Propagate the new points through
-    # the non-linear transformation.
-    y = fun(chi, *args)
-
-    # Compute the approximate mean.
-    y_bar = weights.dot(y).ravel()
-
-    # Compute the approximate covariance.
-    w_m = np.eye(dim_m) - np.tile(weights, (dim_m, 1))
-    Q = w_m.dot(np.diag(weights.ravel())).dot(w_m.T)
-
-    # Compute the new approximate covariance.
-    y_cov = y.T.dot(Q).dot(y)
-
-    # New (mean / covariance).
-    return y_bar, y_cov
 # _end_def_
