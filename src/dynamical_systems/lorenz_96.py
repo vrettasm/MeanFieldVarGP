@@ -188,32 +188,30 @@ class Lorenz96(StochasticProcess):
     def _construct_functions(self, _func_En: callable, _func_dM: callable,
                              _func_dS: callable):
         """
-        This function builds the Energy and Gradients functions for the
-        Lorenz96 system, for an arbitrary value of system dimensions D.
+        This function builds the Energy and Gradients functions for the Lorenz96
+        system, for an arbitrary value of system dimensions D.
 
-        Because the system equations involve different indexes (circular
-        values) [i-2, i-1, i, i+1], we have to take extra care and put
-        all the equations in the right order. Inevitably this code will
-        be slow, but it will allow the used to set any value for 'D' and
-        test the algorithms
+        Because the system equations involve different indexes (circular values)
+        [i-2, i-1, i, i+1], we have to take extra care and put all the equations
+        in the right order. Inevitably this code will be slow, but it will allow
+        the used to set any value for 'D' and test the algorithms
 
-        :param _func_En: this (callable) function is the Esde expression
-        that we have derived from the symbolic code.
+        :param _func_En: this (callable) function is the Esde expression that we
+        have derived from the symbolic code.
 
-        :param _func_dM: this (callable) function is the dEsde_dM expression
-        that we have derived from the symbolic code.
+        :param _func_dM: this (callable) function is the dEsde_dM expression that
+        we have derived from the symbolic code.
 
-        :param _func_dS: this (callable) function is the dEsde_dS expression
-        that we have derived from the symbolic code.
+        :param _func_dS: this (callable) function is the dEsde_dS expression that
+        we have derived from the symbolic code.
 
-        NOTE: this function must be called after the symbolic equations have
-        been loaded.
+        NOTE: this function must be called after the symbolic equations have been
+        loaded.
 
         :return: None.
         """
 
-        # Make sure to clear everything
-        # BEFORE we make the functions.
+        # Make sure to clear everything BEFORE we make the functions.
         self.Esde.clear()
         self.dEsde_dm.clear()
         self.dEsde_ds.clear()
