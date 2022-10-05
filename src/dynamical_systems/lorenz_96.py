@@ -217,20 +217,18 @@ class Lorenz96(StochasticProcess):
         self.dEsde_ds.clear()
 
         # State vector dimensions.
-        Dim = self.dim_D
+        D = self.dim_D
 
         @njit(inline="always")
-        def _circular_index(i: int, D: int) -> tuple:
+        def _circular_index(i: int) -> tuple:
             """
             Auxiliary function.
 
             :param i: index (int) in circular vector.
 
-            :param D: total (int) vector dimensions.
-
             :return: the indexes (i, i+1, i-1, i-2)
                      around a circular set of values
-                     from 0 to D-1.
+                     from 0 to Dim-1.
             """
             return (i,
                     np.mod(i + 1, D),
@@ -239,7 +237,7 @@ class Lorenz96(StochasticProcess):
         # _end_def_
 
         @njit(inline="always")
-        def _unpack_args(D: int, args: array_t):
+        def _unpack_args(args: array_t):
             """
             Local function that unpacks the list of arguments.
             Compiled with numba for faster execution.
@@ -271,16 +269,16 @@ class Lorenz96(StochasticProcess):
         def _l96_En(t, *args):
 
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(Dim, array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(array_t(args))
 
             # Collect all the function values in this array.
-            f_values = zeros_t(Dim, dtype=float)
+            f_values = zeros_t(D, dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(Dim), Dim), dtype=int)
+            circ_idx = array_t(_circular_index(np.arange(D)), dtype=int)
 
             # Iterate through all the system dimensions.
-            for i in range(Dim):
+            for i in range(D):
 
                 # Get the indexes for the i-th dimension.
                 idx = circ_idx[:, i]
@@ -305,16 +303,16 @@ class Lorenz96(StochasticProcess):
         def _l96_dEn_dm(t, *args):
 
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(Dim, array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(array_t(args))
 
             # Collect all the gradient values in this array.
-            f_values = zeros_t((Dim, Dim * 4), dtype=float)
+            f_values = zeros_t((D, D * 4), dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(Dim), Dim), dtype=int)
+            circ_idx = array_t(_circular_index(np.arange(D)), dtype=int)
 
             # Iterate through all the system dimensions.
-            for i in range(Dim):
+            for i in range(D):
 
                 # Get the indexes for the i-th dimension.
                 idx = circ_idx[:, i]
@@ -345,16 +343,16 @@ class Lorenz96(StochasticProcess):
         def _l96_dEn_ds(t, *args):
 
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(Dim, array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(array_t(args))
 
             # Collect all the gradient values in this array.
-            f_values = zeros_t((Dim, Dim * 3), dtype=float)
+            f_values = zeros_t((D, D * 3), dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(Dim), Dim), dtype=int)
+            circ_idx = array_t(_circular_index(np.arange(D)), dtype=int)
 
             # Iterate through all the system dimensions.
-            for i in range(Dim):
+            for i in range(D):
 
                 # Get the indexes for the i-th dimension.
                 idx = circ_idx[:, i]
