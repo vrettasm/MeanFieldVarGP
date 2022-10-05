@@ -1,5 +1,5 @@
 from numba import njit
-from numpy import asfarray
+from numpy import asarray
 from numpy import eye as np_eye
 from numpy import log as np_log
 from numpy import sum as np_sum
@@ -34,7 +34,7 @@ def log_det(x: array_t):
     """
 
     # Make sure input is array.
-    x = asfarray(x)
+    x = asarray(x)
 
     # If the input is scalar.
     if x.ndim == 0:
@@ -88,7 +88,7 @@ def safe_log(x: array_t):
     """
 
     # Make sure input is an array.
-    x = asfarray(x)
+    x = asarray(x)
 
     # Filter out small and large values.
     x = np_maximum(np_minimum(x, 1.0E+300), 1.0E-300)
@@ -125,7 +125,7 @@ def cholesky_inv(x: array_t):
     """
 
     # Make sure input is array.
-    x = asfarray(x)
+    x = asarray(x)
 
     # Check if the input is scalar.
     if x.ndim == 0:
