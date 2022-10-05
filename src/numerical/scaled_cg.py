@@ -1,7 +1,13 @@
 import numpy as np
 from numba import njit
 from time import perf_counter
+from numpy import abs as np_abs
+from numpy import mod as np_mod
+from numpy import sqrt as np_sqrt
 from numpy import array as array_t
+from numpy import isclose as np_isclose
+from numpy import minimum as np_minimum
+from numpy import maximum as np_maximum
 
 
 class SCG(object):
@@ -241,7 +247,7 @@ class SCG(object):
                 # _end_if_
 
                 # Update sigma and check the gradient on a new direction.
-                sigma = sigma0 / np.sqrt(kappa)
+                sigma = sigma0 / np_sqrt(kappa)
                 x_plus = x + (sigma * d)
 
                 # We evaluate the df(x_plus).
@@ -312,7 +318,7 @@ class SCG(object):
             _stats["dfx"][j] = total_grad
 
             # Used in verbose/display mode.
-            if self.display and (np.mod(j, 50) == 0):
+            if self.display and (np_mod(j, 50) == 0):
 
                 # Timer snapshot after 'j' iterations.
                 time_tj = perf_counter()
@@ -331,8 +337,8 @@ class SCG(object):
             if success:
 
                 # Check for termination.
-                if (np.abs(alpha * d).max() <= self.x_tol) and\
-                        (np.abs(f_new - f_old) <= self.f_tol):
+                if (np_abs(alpha * d).max() <= self.x_tol) and\
+                        (np_abs(f_new - f_old) <= self.f_tol):
                     # Copy the new value.
                     fx = f_new
 
@@ -358,7 +364,7 @@ class SCG(object):
                     _stats["func_eval"] += 1
 
                     # If the gradient is zero then exit.
-                    if np.isclose(grad_new.T.dot(grad_new), 0.0):
+                    if np_isclose(grad_new.T.dot(grad_new), 0.0):
                         # Copy the new value.
                         fx = f_now
 
@@ -376,11 +382,11 @@ class SCG(object):
 
             # Adjust beta according to comparison ratio.
             if Delta < 0.25:
-                beta = np.minimum(4.0 * beta, beta_max)
+                beta = np_minimum(4.0 * beta, beta_max)
             # _end_if_
 
             if Delta > 0.75:
-                beta = np.maximum(0.5 * beta, beta_min)
+                beta = np_maximum(0.5 * beta, beta_min)
             # _end_if_
 
             # Update search direction using Polak-Ribiere formula
@@ -392,7 +398,7 @@ class SCG(object):
             else:
                 # Check the flag.
                 if success:
-                    gamma = np.maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
+                    gamma = np_maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
                     d = (gamma * d) - grad_new
                 # _end_if_
 
