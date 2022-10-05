@@ -228,7 +228,7 @@ class Lorenz96(StochasticProcess):
 
             :return: the indexes (i, i+1, i-1, i-2)
                      around a circular set of values
-                     from 0 to Dim-1.
+                     from 0 to D-1.
             """
             return (i,
                     np.mod(i + 1, D),
