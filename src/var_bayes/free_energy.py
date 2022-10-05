@@ -1,11 +1,18 @@
 import time
 import numpy as np
+from numpy import abs as np_abs
+from numpy import sum as np_sum
+from numpy import ones as np_ones
 from numpy import full as np_full
 from numpy import zeros as zeros_t
 from numpy import empty as empty_t
 from numpy import array as array_t
-from numpy import reshape as reshape
-from numpy import squeeze as squeeze
+from numpy import reshape as np_reshape
+from numpy import squeeze as np_squeeze
+from numpy import isfinite as np_isfinite
+from numpy import (atleast_1d,
+                   atleast_2d)
+
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
 from joblib import (Parallel, delayed,
@@ -297,21 +304,21 @@ class FreeEnergy(object):
         # Energy of the initial moment.
         # NOTE: This formula works only because the matrices 'tau0'
         # and 's0' are diagonal, and we work with vectors.
-        E0 = log_det(self._tau0/s0) + np.sum((z0**2 + s0 - self._tau0) / self._tau0)
+        E0 = log_det(self._tau0/s0) + np_sum((z0**2 + s0 - self._tau0) / self._tau0)
 
         # Sanity check.
-        if not np.isfinite(E0):
+        if not np_isfinite(E0):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" E0 is not a finite number: {E0}")
         # _end_if_
 
         # Auxiliary variable.
-        one_ = np.ones(1)
+        one_ = np_ones(1)
 
         # Compute the gradients. We use the "atleast_1d" to ensure
         # that the scalar cases (even though rare) will be covered.
-        dE0_dm0 = np.atleast_1d(z0 / self._tau0)
-        dE0_ds0 = np.atleast_1d(0.5 * (one_ / self._tau0 - one_ / s0))
+        dE0_dm0 = atleast_1d(z0 / self._tau0)
+        dE0_ds0 = atleast_1d(0.5 * (one_ / self._tau0 - one_ / s0))
 
         # Kullback-Liebler and its derivatives at
         # time t=0, (i.e. dE0/dm(0), dE0/ds(0))
@@ -356,7 +363,7 @@ class FreeEnergy(object):
         # NOTE: This should not change for equally spaced
         # observations. This is here to ensure that small
         # 'dt' deviations will not affect the algorithm.
-        delta_t = np.abs(tj-ti)
+        delta_t = np_abs(tj-ti)
 
         # Mid-point intervals (for the evaluation of the Esde function).
         # NOTE: These should not change for equally spaced observations.
@@ -390,7 +397,7 @@ class FreeEnergy(object):
         if inv_sigma.size == 1:
 
             # Remove singleton dimension.
-            Esde = squeeze(inv_sigma*i_En_sde)
+            Esde = np_squeeze(inv_sigma*i_En_sde)
 
             # This way we avoid errors in 1D systems.
             dEsde_dm = inv_sigma*i_dEn_dm
@@ -440,7 +447,7 @@ class FreeEnergy(object):
         L = obs_times.size - 1
 
         # Inverted diagonal noise vector.
-        inv_sigma = np.atleast_1d(1.0 / self.sigma)
+        inv_sigma = atleast_1d(1.0 / self.sigma)
 
         # NOTE: For small systems (e.g. D < 8) it is
         # preferred to use as backend "threading".
@@ -482,7 +489,7 @@ class FreeEnergy(object):
         # _end_for_
 
         # Sanity check.
-        if not np.isfinite(Esde):
+        if not np_isfinite(Esde):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Esde is not a finite number: {Esde}")
         # _end_if_
@@ -491,8 +498,8 @@ class FreeEnergy(object):
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
         return Esde,\
-               reshape(dEsde_dm, (L, dim_D, 4), order='C'),\
-               reshape(dEsde_ds, (L, dim_D, 3), order='C')
+               np_reshape(dEsde_dm, (L, dim_D, 4), order='C'),\
+               np_reshape(dEsde_ds, (L, dim_D, 3), order='C')
     # _end_def_
 
     def E_obs(self, mean_pts, vars_pts):
@@ -518,7 +525,7 @@ class FreeEnergy(object):
 
         # Sanity check.
         if isinstance(Ri, float):
-            Ri = np.atleast_2d(Ri)
+            Ri = atleast_2d(Ri)
         # _end_if_
 
         # Auxiliary quantity: (Y - H*m).
@@ -531,7 +538,7 @@ class FreeEnergy(object):
         W = Ri.diagonal().dot(vars_pts)
 
         # Compute observations' energy.
-        Eobs = np.sum(Z.T.dot(Z).diagonal() + W)
+        Eobs = np_sum(Z.T.dot(Z).diagonal() + W)
 
         # Logarithm of 2*pi.
         log2pi = 1.8378770664093453
@@ -540,7 +547,7 @@ class FreeEnergy(object):
         Eobs += self.num_M * (self.dim_d * log2pi + log_det(self.obs_noise))
 
         # Sanity check.
-        if not np.isfinite(Eobs):
+        if not np_isfinite(Eobs):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Eobs is not a finite number: {Eobs}")
         # _end_if_
@@ -552,15 +559,15 @@ class FreeEnergy(object):
         # Note that the dEobs(k)/ds(k) is identical for all observations.
         # >> dEobs(k)/ds(k) := 0.5*diag(H'*Ri*H)
         dEobs_ds = np_full((self.dim_d, self.num_M),
-                           0.5 * np.atleast_2d(Ri.diagonal()).T, dtype=float)
+                           0.5 * atleast_2d(Ri.diagonal()).T, dtype=float)
 
         # Check for 1D observations.
         if self.dim_d == 1:
 
             # Remove singleton dimensions on exit.
             return 0.5 * Eobs,\
-                   squeeze(dEobs_dm),\
-                   squeeze(dEobs_ds)
+                   np_squeeze(dEobs_dm),\
+                   np_squeeze(dEobs_ds)
 
         # _end_if_
 
@@ -596,15 +603,15 @@ class FreeEnergy(object):
         """
 
         # Separate the mean from the variance points.
-        mean_points = reshape(x[0:self.num_mp],
-                              (self.dim_D, (3*self.num_M + 4)),
-                              order='C')
+        mean_points = np_reshape(x[0:self.num_mp],
+                                 (self.dim_D, (3*self.num_M + 4)),
+                                 order='C')
 
         # The variance points are in log-space to ensure positivity,
         # so we pass them through the exponential function first.
-        vars_points = reshape(np.exp(x[self.num_mp:]),
-                              (self.dim_D, (2*self.num_M + 3)),
-                              order='C')
+        vars_points = np_reshape(np.exp(x[self.num_mp:]),
+                                 (self.dim_D, (2*self.num_M + 3)),
+                                 order='C')
 
         # Energy (and gradients) from the initial moment (t=0).
         E0, dE0_dm0, dE0_ds0 = self.E_kl0(mean_points[:, 0],
