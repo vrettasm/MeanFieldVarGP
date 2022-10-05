@@ -14,7 +14,7 @@ class TestLorenz63(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        print(" >> Testing Lorenz63 - STOP -")
+        print(" >> Testing Lorenz63 - STOP -", end="\n\n")
     # _end_def_
 
     def setUp(self) -> None:
@@ -32,8 +32,7 @@ class TestLorenz63(unittest.TestCase):
 
     def test_inverse_sigma(self) -> None:
         """
-        Make sure the inverse sigma method
-        returns the correct value.
+        Ensure the inverse sigma method returns the correct value.
 
         :return: None
         """
@@ -46,15 +45,14 @@ class TestLorenz63(unittest.TestCase):
 
     def test_load_functions(self) -> None:
         """
-        Upon initialization the constructor must have loaded
-        three files:
+        Upon initialization the constructor must have loaded 9 files:
+
             1) three for the Esde,
             2) three for the dEsde_dm,
             3) three for the dEsde_ds.
 
-        NOTE: This tests only if the number of loaded functions
-        is the expected one. It does not check the validity of
-        the functions.
+        NOTE: This tests only if the number of loaded functions is the
+        expected one. It does not check the validity of the functions.
         """
 
         # This should be one.

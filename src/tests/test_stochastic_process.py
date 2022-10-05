@@ -15,7 +15,7 @@ class TestStochasticProcess(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        print(" >> Testing StochasticProcess - STOP -")
+        print(" >> Testing StochasticProcess - STOP -", end="\n\n")
     # _end_def_
 
     def setUp(self) -> None:
@@ -31,7 +31,7 @@ class TestStochasticProcess(unittest.TestCase):
 
     def test_initializations(self) -> None:
         """
-        Test the object for un-initialized values.
+        All the object's un-initialized parameters are 'None'.
 
         :return: None
         """
@@ -76,6 +76,7 @@ class TestStochasticProcess(unittest.TestCase):
     def test_rng_seed(self) -> None:
         """
         Make sure the input to the 'RNG' is set properly.
+
         The seed value (911) corresponds to the following
         state values:
 
@@ -94,9 +95,9 @@ class TestStochasticProcess(unittest.TestCase):
 
     def test_sigma_accessor(self) -> None:
         """
-        Make sure the sigma accessor does not accept zeros
-        or negative values. It represents variance, hence
-        it should only contain positive values.
+        Make sure the sigma accessor does not accept zeros or negative values.
+
+        It represents variance, hence it should only contain positive values.
 
         :return: None
         """

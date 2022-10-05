@@ -13,7 +13,7 @@ class TestDoubleWell(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        print(" >> Testing DoubleWell - STOP -")
+        print(" >> Testing DoubleWell - STOP -", end="\n\n")
     # _end_def_
 
     def setUp(self) -> None:
@@ -29,8 +29,7 @@ class TestDoubleWell(unittest.TestCase):
 
     def test_inverse_sigma(self) -> None:
         """
-        Make sure the inverse sigma method
-        returns the correct value.
+        Ensure the inverse sigma method returns the correct value.
 
         :return: None
         """
@@ -43,15 +42,14 @@ class TestDoubleWell(unittest.TestCase):
 
     def test_load_functions(self) -> None:
         """
-        Upon initialization the constructor must have loaded
-        three files:
+        Upon initialization the constructor must have loaded 3 files:
+
             1) one for the Esde,
             2) one for the dEsde_dm,
             3) one for the dEsde_ds.
 
-        NOTE: This tests only if the number of loaded functions
-        is the expected one. It does not check the validity of
-        the functions.
+        NOTE: This tests only if the number of loaded functions is the
+        expected one. It does not check the validity of the functions.
         """
 
         # This should be one.

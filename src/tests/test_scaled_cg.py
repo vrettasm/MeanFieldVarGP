@@ -16,13 +16,12 @@ class TestScaledCG(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        print(" >> Testing Scaled-CG - STOP -")
+        print(" >> Testing Scaled-CG - STOP -", end="\n\n")
     # _end_def_
 
     def setUp(self) -> None:
         """
-        Creates the test object with
-        default random number generator.
+        Creates the test object with default random number generator.
 
         :return: None.
         """
@@ -37,11 +36,11 @@ class TestScaledCG(unittest.TestCase):
 
     def test_sphere_func(self):
         """
-        Test the Sphere Function (n >= 1).
+        The global minimum is found at: f(0, 0, ..., 0) = 0.
 
-            f(x) = \Sum_{i=1}^{n} x_i^2
+        Sphere function (n >= 1) is:
 
-        the global minimum is found at: f(0, 0, ..., 0) = 0.
+            f(x) = \Sum_{i=1}^{n} x_i^2.
 
         :return: None.
 
@@ -76,11 +75,11 @@ class TestScaledCG(unittest.TestCase):
 
     def test_rosenbrock_fun(self):
         """
-        Test the Rosenbrock Function (n=2).
+        The global minimum is found at: f(1, 1) = 0.
+
+        The Rosenbrock function (n=2):
 
             f(x) = 100*(x1 - x0^2)^2 + (1 - x0)^2
-
-        the global minimum is found at: f(1, 1) = 0.
 
         :return: None.
         """
