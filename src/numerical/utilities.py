@@ -1,9 +1,13 @@
-import numpy as np
 from numba import njit
+from numpy import asfarray
+from numpy import eye as np_eye
 from numpy import log as np_log
 from numpy import sum as np_sum
 from numpy import diag as np_diag
+from numpy import sqrt as np_sqrt
 from numpy import array as array_t
+from numpy import minimum as np_minimum
+from numpy import maximum as np_maximum
 from numpy.linalg import solve, cholesky
 
 
@@ -30,7 +34,7 @@ def log_det(x: array_t):
     """
 
     # Make sure input is array.
-    x = np.asarray(x)
+    x = asfarray(x)
 
     # If the input is scalar.
     if x.ndim == 0:
@@ -84,10 +88,10 @@ def safe_log(x: array_t):
     """
 
     # Make sure input is an array.
-    x = np.asarray(x)
+    x = asfarray(x)
 
     # Filter out small and large values.
-    x = np.maximum(np.minimum(x, 1.0E+300), 1.0E-300)
+    x = np_maximum(np_minimum(x, 1.0E+300), 1.0E-300)
 
     # Return the log() of the filtered input.
     return np_log(x)
@@ -102,7 +106,7 @@ def _cholesky_inv_fast_(x: array_t):
     """
 
     # Invert the Cholesky decomposition.
-    c_inv = solve(cholesky(x), np.eye(x.shape[0]))
+    c_inv = solve(cholesky(x), np_eye(x.shape[0]))
 
     # Invert input matrix.
     x_inv = c_inv.T.dot(c_inv)
@@ -121,11 +125,11 @@ def cholesky_inv(x: array_t):
     """
 
     # Make sure input is array.
-    x = np.asarray(x)
+    x = asfarray(x)
 
     # Check if the input is scalar.
     if x.ndim == 0:
-        return 1.0 / x, 1.0 / np.sqrt(x)
+        return 1.0 / x, 1.0 / np_sqrt(x)
     else:
 
         # Check if the input is vector.
