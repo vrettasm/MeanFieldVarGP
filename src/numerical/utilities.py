@@ -77,11 +77,26 @@ def safe_log(x: array_t):
     return np.log(x)
 # _end_def_
 
+@njit(fastmath=True)
+def _fast_cholesky_inv(x: array_t):
+    """
+    Inverts an input array (matrix) using Cholesky decomposition.
+
+    :param x: input array (dim_d x dim_d)
+
+    :return: inverted 'x' and inverted Cholesky factor.
+    """
+
+    c_inv = solve(cholesky(x), np.eye(x.shape[0]))
+
+    x_inv = c_inv.T.dot(c_inv)
+
+    return x_inv, c_inv
+# _end_def_
 
 def cholesky_inv(x: array_t):
     """
-    Inverts an input array (matrix) using Cholesky
-    decomposition.
+    Inverts an input array (matrix) using Cholesky decomposition.
 
     :param x: input array (dim_d x dim_d)
 
@@ -106,13 +121,8 @@ def cholesky_inv(x: array_t):
 
         # _end_if_
 
-        # Inverted Cholesky decomposition.
-        c_inv = solve(cholesky(x), np.eye(x.shape[0]))
-
-        # Inverted input matrix.
-        x_inv = c_inv.T.dot(c_inv)
-
-        return x_inv, c_inv
+        # Call the numba code here.
+        return _fast_cholesky_inv(x)
     # _end_if_
 
 # _end_def_
