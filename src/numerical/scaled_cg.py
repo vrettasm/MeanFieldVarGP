@@ -229,10 +229,10 @@ class SCG(object):
 
                 # Update sigma and check the gradient on a new direction.
                 sigma = sigma0 / np.sqrt(kappa)
-                x_plus = x + (sigma * d)
 
                 # We evaluate the df(x_plus).
-                _, g_plus = func(x_plus, *args)
+                # > x_plus = x + (sigma * d)
+                _, g_plus = func(x + (sigma * d), *args)
 
                 # Increase function evaluations.
                 _stats["func_eval"] += 1
