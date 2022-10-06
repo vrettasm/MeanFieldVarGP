@@ -14,7 +14,7 @@ from scipy.optimize import check_grad
 
 from dynamical_systems.stochastic_process import StochasticProcess
 from numerical.scaled_cg import SCG
-from numerical.utilities import (cholesky_inv, log_det)
+from numerical.utilities import safe_log
 
 
 class FreeEnergy(object):
@@ -300,9 +300,14 @@ class FreeEnergy(object):
         z0 = m0 - self._mu0
 
         # Energy of the initial moment.
-        # NOTE: This formula works only because the matrices 'tau0'
-        # and 's0' are diagonal, and we work with vectors.
-        E0 = log_det(self._tau0/s0) + np.sum((z0**2 + s0 - self._tau0) / self._tau0)
+        #
+        # NOTE(1): This formula works only because the matrices 'tau0' and 's0' are diagonal,
+        # and we work with vectors.
+        #
+        # NOTE(2): Since we have diagonal matrices the log(det(X)) can be safely replaced by
+        # safe_log(prod(X)).
+        E0 = safe_log(np.prod(self._tau0/s0)) +\
+             np.sum((z0**2 + s0 - self._tau0) / self._tau0)
 
         # Sanity check.
         if not np.isfinite(E0):
@@ -568,27 +573,27 @@ class FreeEnergy(object):
         respect to the mean and variance points.
         """
 
-        # Inverted Ri and Cholesky factor Qi.
-        Ri, Qi = cholesky_inv(self.obs_noise)
-
         # Sanity check.
-        if isinstance(Qi, float):
-            Qi = array_t(Qi)
-        # _end_if_
+        obs_noise = atleast_1d(self.obs_noise)
 
-        # Sanity check.
-        if isinstance(Ri, float):
-            Ri = atleast_2d(Ri)
-        # _end_if_
+        # Inverted noise diagonal elements 'Ri' and
+        # Cholesky factor 'Qi'.
+        #
+        # >> Ri, Qi = cholesky_inv(self.obs_noise)
+        #
+        # For diagonal matrices these are equivalent.
+        #
+        Ri = (1.0 / obs_noise)
+        Qi = (1.0 / np.sqrt(obs_noise))
 
         # Auxiliary quantity: (Y - H*m).
         Y_minus_Hm = self.obs_values.T - mean_pts
 
         # Auxiliary quantity (for the E_obs).
-        Z = Qi.dot(Y_minus_Hm)
+        Z = np.multiply(Qi[:, np.newaxis], Y_minus_Hm)
 
         # Auxiliary quantity (for the E_obs).
-        W = Ri.diagonal().dot(vars_pts)
+        W = Ri.dot(vars_pts)
 
         # Compute observations' energy.
         Eobs = np.sum(Z.T.dot(Z).diagonal() + W)
@@ -597,7 +602,9 @@ class FreeEnergy(object):
         log2pi = 1.8378770664093453
 
         # Final energy value (including the constants).
-        Eobs += self.num_M * (self.dim_d * log2pi + log_det(self.obs_noise))
+        # NOTE: Since we have only diagonal matrices the log(det(X)) can be safely
+        # replaced by safe_log(prod(X)).
+        Eobs += self.num_M * (self.dim_d * log2pi + safe_log(np.prod(obs_noise)))
 
         # Sanity check.
         if not np.isfinite(Eobs):
@@ -614,12 +621,12 @@ class FreeEnergy(object):
 
         # Initialize dEobs(k)/dm(k) gradients array.
         # >> dEobs(k)/dm(k) := -H'*Ri*(yk-h(xk))
-        dEobs_dm = -Ri.dot(Y_minus_Hm)
+        dEobs_dm = -np.multiply(Ri[:, np.newaxis], Y_minus_Hm)
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
         # >> dEobs(k)/ds(k) := 0.5*diag(H'*Ri*H)
         dEobs_ds = np.full((self.dim_d, self.num_M),
-                           0.5 * atleast_2d(Ri.diagonal()).T, dtype=float)
+                           0.5 * atleast_2d(Ri).T, dtype=float)
 
         # Check for 1D observations.
         if self.dim_d == 1:
