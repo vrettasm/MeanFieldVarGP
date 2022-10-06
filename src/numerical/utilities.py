@@ -11,16 +11,6 @@ from numpy import maximum as np_maximum
 from numpy.linalg import solve, cholesky
 
 
-@njit(fastmath=True)
-def _sum_log_diag_cholesky_(x: array_t):
-    """
-    Helper function implemented with numba.
-
-    :param x: input array.
-    """
-    return np_sum(np_log(np_diag(cholesky(x))))
-# _end_def_
-
 def log_det(x: array_t):
     """
     Returns the log(det(x)), but more stable and accurate.
@@ -57,7 +47,7 @@ def log_det(x: array_t):
     # _end_if_
 
     # More stable than: log(det(x)).
-    return 2.0 * _sum_log_diag_cholesky_(x)
+    return 2.0 * np_sum(np_log(cholesky(x).diagonal()))
 # _end_def_
 
 @njit(fastmath=True)
