@@ -1,5 +1,6 @@
-import time
 import numpy as np
+
+from numpy import asfarray
 from numpy import abs as np_abs
 from numpy import sum as np_sum
 from numpy import ones as np_ones
@@ -10,16 +11,17 @@ from numpy import array as array_t
 from numpy import reshape as np_reshape
 from numpy import squeeze as np_squeeze
 from numpy import isfinite as np_isfinite
-from numpy import (atleast_1d,
-                   atleast_2d)
+from numpy import (atleast_1d, atleast_2d)
+
+from time import perf_counter
 
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
-from joblib import (Parallel, delayed,
-                    cpu_count)
+
+from joblib import (Parallel, delayed, cpu_count)
 
 from numerical.scaled_cg import SCG
-from numerical.utilities import cholesky_inv, log_det
+from numerical.utilities import (cholesky_inv, log_det)
 from dynamical_systems.stochastic_process import StochasticProcess
 
 
@@ -73,10 +75,10 @@ class FreeEnergy(object):
         self.grad_fun_vp = sde.grad_variance
 
         # Prior mean (t=0).
-        self._mu0 = np.asarray(mu0, dtype=float)
+        self._mu0 = asfarray(mu0)
 
         # Prior variance diagonal elements (t=0).
-        self._tau0 = np.asarray(tau0, dtype=float)
+        self._tau0 = asfarray(tau0)
 
         # Make sure the SDE drift and diffusion noise
         # parameters are entered correctly as arrays.
@@ -94,9 +96,9 @@ class FreeEnergy(object):
 
         # Make sure the observation related parameters are
         # entered correctly as numpy arrays (type = float).
-        self.obs_times = np.asarray(obs_times, dtype=float)
-        self.obs_noise = np.asarray(obs_noise, dtype=float)
-        self.obs_values = np.asarray(obs_values, dtype=float)
+        self.obs_times = asfarray(obs_times)
+        self.obs_noise = asfarray(obs_noise)
+        self.obs_values = asfarray(obs_values)
 
         # Infer the system dimensions.
         self.dim_D = self.sigma.size
@@ -207,7 +209,7 @@ class FreeEnergy(object):
 
         :return: None.
         """
-        self._mu0 = np.asarray(new_value, dtype=float)
+        self._mu0 = asfarray(new_value)
     # _end_def_
 
     @property
@@ -232,7 +234,7 @@ class FreeEnergy(object):
 
         :return: None.
         """
-        self._tau0 = np.asarray(new_value, dtype=float)
+        self._tau0 = asfarray(new_value)
     # _end_def_
 
     @property
@@ -257,7 +259,7 @@ class FreeEnergy(object):
 
         :return: None.
         """
-        self.theta = np.asarray(new_value, dtype=float)
+        self.theta = asfarray(new_value)
     # _end_def_
 
     @property
@@ -282,10 +284,10 @@ class FreeEnergy(object):
 
         :return: None.
         """
-        self.sigma = np.asarray(new_value, dtype=float)
+        self.sigma = asfarray(new_value)
     # _end_def_
 
-    def E_kl0(self, m0: array_t, s0: array_t):
+    def E_kl0(self, m0: array_t, s0: array_t, output_gradients: bool = True):
         """
         Energy of the initial state with a Gaussian
         prior q(x|t=0).
@@ -294,8 +296,12 @@ class FreeEnergy(object):
 
         :param s0: marginal variance at t=0, (dim_D).
 
-        :return: energy of the initial state E0, (scalar)
-        and its derivatives with respect to 'm0' and 's0'.
+        :param output_gradients: boolean flag to whether include, or not the
+        gradients in the output. This is used when the optimize method requires
+        as output only the function f(x) or also the gradient df(x)/dx.
+
+        :return: energy of the initial state E0, (scalar) and its derivatives
+        with respect to 'm0' and 's0'.
         """
 
         # Difference of the two "mean" vectors.
@@ -310,6 +316,13 @@ class FreeEnergy(object):
         if not np_isfinite(E0):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" E0 is not a finite number: {E0}")
+        # _end_if_
+
+        # Check if we want the gradients.
+        if not output_gradients:
+
+            # Exit here.
+            return 0.5 * E0, None, None
         # _end_if_
 
         # Auxiliary variable.
@@ -329,7 +342,7 @@ class FreeEnergy(object):
     @staticmethod
     def single_interval(n_th: int, ti: float, tj: float, energy_func: callable, gradMP_func: callable,
                         gradSP_func: callable, mean_pts: array_t, vars_pts: array_t, sigma: array_t,
-                        theta: array_t, inv_sigma: array_t):
+                        theta: array_t, inv_sigma: array_t, output_gradients: bool = True):
         """
         This static method computes the integrated values of the Esde and its gradients for a single
         time interval [ti, tj].
@@ -356,6 +369,10 @@ class FreeEnergy(object):
         :param theta: drift model parameters vector.
 
         :param inv_sigma: inverse values of diffusion noise vector.
+
+        :param output_gradients: boolean flag to whether include, or not the gradients in the output.
+        This is used when the optimize method requires as output only the function f(x) or also the
+        gradient df(x)/dx.
 
         :return: the integrated values (in [ti, tj] of Esde, dEsde_dm and dEsde_ds.
         """
@@ -385,13 +402,19 @@ class FreeEnergy(object):
         i_En_sde = quad_vec(lambda t: energy_func(t, *params), ti, tj,
                             limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
 
-        # Solve the integrals of dEsde(t)/dMp in [ti, tj].
-        i_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
-                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        # Check if we want the gradients.
+        if output_gradients:
 
-        # Solve the integrals of dEsde(t)/dSp in [ti, tj].
-        i_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
-                            limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+            # Solve the integrals of dEsde(t)/dMp in [ti, tj].
+            i_dEn_dm = quad_vec(lambda t: gradMP_func(t, *params), ti, tj,
+                                limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+
+            # Solve the integrals of dEsde(t)/dSp in [ti, tj].
+            i_dEn_ds = quad_vec(lambda t: gradSP_func(t, *params), ti, tj,
+                                limit=100, epsabs=1.0e-06, epsrel=1.0e-06)[0]
+        else:
+            i_dEn_dm, i_dEn_ds = None, None
+        # _end_if_
 
         # Check for 1D systems.
         if inv_sigma.size == 1:
@@ -399,29 +422,41 @@ class FreeEnergy(object):
             # Remove singleton dimension.
             Esde = np_squeeze(inv_sigma*i_En_sde)
 
-            # This way we avoid errors in 1D systems.
-            dEsde_dm = inv_sigma*i_dEn_dm
-            dEsde_ds = inv_sigma*i_dEn_ds
+            # Check if we want the gradients.
+            if output_gradients:
+
+                # This way we avoid errors in 1D systems.
+                dEsde_dm = 0.5 * inv_sigma*i_dEn_dm
+                dEsde_ds = 0.5 * inv_sigma*i_dEn_ds
+            else:
+                dEsde_dm, dEsde_ds = None, None
+            # _end_if_
 
         else:
 
             # Scale everything with inverse noise.
             Esde = inv_sigma.dot(i_En_sde)
 
-            # NOTE: the correct dimensions are (D x 4).
-            dEsde_dm = inv_sigma.dot(i_dEn_dm)
+            # Check if we want the gradients.
+            if output_gradients:
 
-            # NOTE: the correct dimensions are (D x 3).
-            dEsde_ds = inv_sigma.dot(i_dEn_ds)
+                # NOTE: the correct dimensions are (D x 4).
+                dEsde_dm = 0.5 * inv_sigma.dot(i_dEn_dm)
+
+                # NOTE: the correct dimensions are (D x 3).
+                dEsde_ds = 0.5 * inv_sigma.dot(i_dEn_ds)
+            else:
+                dEsde_dm, dEsde_ds = None, None
+            # _end_if_
 
         # _end_if_
 
-        # Include the n-th interval here to guarantee the order
-        # of the sub-intervals.
-        return n_th, 0.5 * Esde, 0.5 * dEsde_dm, 0.5 * dEsde_ds
+        # Include the n-th interval here to guarantee
+        # the order of the sub-intervals.
+        return n_th, 0.5 * Esde, dEsde_dm, dEsde_ds
     # _end_def_
 
-    def E_sde(self, mean_pts, vars_pts):
+    def E_sde(self, mean_pts: array_t, vars_pts: array_t, output_gradients: bool = True):
         """
         Energy from the SDE prior process.
 
@@ -429,8 +464,12 @@ class FreeEnergy(object):
 
         :param vars_pts: optimized variance points.
 
-        :return: Energy from the SDE prior process (scalar) and
-        its gradients with respect to the mean & variance points.
+        :param output_gradients: boolean flag to whether include, or not the gradients in
+        the output. This is used when the optimize method requires as output only the f(x)
+        function, or also the gradient df(x)/dx.
+
+        :return: Energy from the SDE prior process (scalar) and its gradients with respect
+        to the mean & variance points.
         """
 
         # Local copy of the single interval function.
@@ -460,17 +499,24 @@ class FreeEnergy(object):
                                       self.drift_fun_sde, self.grad_fun_mp, self.grad_fun_vp,
                                       mean_pts[:, (3 * n): (3 * n) + 4],
                                       vars_pts[:, (2 * n): (2 * n) + 3],
-                                      self.sigma, self.theta, inv_sigma) for n in range(L)
+                                      self.sigma, self.theta, inv_sigma,
+                                      output_gradients) for n in range(L)
         )
+
+        # Check if we want the gradients.
+        if output_gradients:
+
+            # Initialize the gradients arrays.
+            # -> dEsde_dm := dEsde(tk)/dm(tk)
+            # -> dEsde_ds := dEsde(tk)/ds(tk)
+            dEsde_dm = empty_t((L, 4 * dim_D), dtype=float)
+            dEsde_ds = empty_t((L, 3 * dim_D), dtype=float)
+        else:
+            dEsde_dm, dEsde_ds = None, None
+        # _end_if_
 
         # Initialize energy for the SDE.
         Esde = 0.0
-
-        # Initialize the gradients arrays.
-        # -> dEsde_dm := dEsde(tk)/dm(tk)
-        # -> dEsde_ds := dEsde(tk)/ds(tk)
-        dEsde_dm = empty_t((L, 4 * dim_D), dtype=float)
-        dEsde_ds = empty_t((L, 3 * dim_D), dtype=float)
 
         # Extract all the result from the parallel run.
         # NOTE: The order of the results matters in the
@@ -483,15 +529,27 @@ class FreeEnergy(object):
             # Accumulate the Esde here.
             Esde += res_[1]
 
-            # The gradients will be accumulated in the E_cost.
-            dEsde_dm[i] = res_[2]
-            dEsde_ds[i] = res_[3]
+            # Check if we want the gradients.
+            if output_gradients:
+
+                # The gradients will be accumulated in the E_cost.
+                dEsde_dm[i] = res_[2]
+                dEsde_ds[i] = res_[3]
+            # _end_if_
+
         # _end_for_
 
         # Sanity check.
         if not np_isfinite(Esde):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Esde is not a finite number: {Esde}")
+        # _end_if_
+
+        # Check if we want the gradients.
+        if not output_gradients:
+
+            # Exit here.
+            return Esde, None, None
         # _end_if_
 
         # Return the total energy (including the correct scaling).
@@ -502,7 +560,7 @@ class FreeEnergy(object):
                np_reshape(dEsde_ds, (L, dim_D, 3), order='C')
     # _end_def_
 
-    def E_obs(self, mean_pts, vars_pts):
+    def E_obs(self, mean_pts: array_t, vars_pts: array_t, output_gradients: bool = True):
         """
         Energy from the Gaussian likelihood.
 
@@ -510,9 +568,12 @@ class FreeEnergy(object):
 
         :param vars_pts: optimized variance points.
 
-        :return: Energy from the observation likelihood (scalar)
-        and its gradients with respect to the mean and variance
-        points.
+        :param output_gradients: boolean flag to whether include, or not the gradients in
+        the output. This is used when the optimize method requires as output only the f(x)
+        function, or also the gradient df(x)/dx.
+
+        :return: Energy from the observation likelihood (scalar) and its gradients with
+        respect to the mean and variance points.
         """
 
         # Inverted Ri and Cholesky factor Qi.
@@ -552,6 +613,13 @@ class FreeEnergy(object):
                                f" Eobs is not a finite number: {Eobs}")
         # _end_if_
 
+        # Check if we want the gradients.
+        if not output_gradients:
+
+            # Exit here.
+            return 0.5 * Eobs, None, None
+        # _end_if_
+
         # Initialize dEobs(k)/dm(k) gradients array.
         # >> dEobs(k)/dm(k) := -H'*Ri*(yk-h(xk))
         dEobs_dm = -Ri.dot(Y_minus_Hm)
@@ -576,7 +644,7 @@ class FreeEnergy(object):
         return 0.5 * Eobs, dEobs_dm, dEobs_ds
     # _end_def_
 
-    def E_cost(self, x, output_gradients=True):
+    def E_cost(self, x, output_gradients: bool = True):
         """
         Total cost function value (scalar) and derivatives.
         This is passed to the "scaled_cg" optimization:
@@ -615,15 +683,18 @@ class FreeEnergy(object):
 
         # Energy (and gradients) from the initial moment (t=0).
         E0, dE0_dm0, dE0_ds0 = self.E_kl0(mean_points[:, 0],
-                                          vars_points[:, 0])
+                                          vars_points[:, 0],
+                                          output_gradients)
 
         # Energy from the SDE (and gradients).
         Esde, dEsde_dm, dEsde_ds = self.E_sde(mean_points,
-                                              vars_points)
+                                              vars_points,
+                                              output_gradients)
 
         # Energy from the observations' likelihood (and gradients).
         Eobs, dEobs_dm, dEobs_ds = self.E_obs(mean_points[self.ix_ikm],
-                                              vars_points[self.ix_iks])
+                                              vars_points[self.ix_iks],
+                                              output_gradients)
         # Put all energy values together.
         Ecost = E0 + Esde + Eobs
 
@@ -751,13 +822,13 @@ class FreeEnergy(object):
         scg_minimize = SCG(self.E_cost, options)
 
         # Start the timer.
-        time_t0 = time.perf_counter()
+        time_t0 = perf_counter()
 
         # Run the optimization procedure.
         opt_x, opt_fx = scg_minimize(x0)
 
         # Stop the timer.
-        time_tf = time.perf_counter()
+        time_tf = perf_counter()
 
         # Extract the actual number of iterations.
         num_it = scg_minimize.stats["nit"]
