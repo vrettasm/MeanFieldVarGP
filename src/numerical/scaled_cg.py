@@ -1,13 +1,7 @@
-import numpy as np
-from numba import njit
 from time import perf_counter
-from numpy import abs as np_abs
-from numpy import mod as np_mod
-from numpy import sqrt as np_sqrt
+
+import numpy as np
 from numpy import array as array_t
-from numpy import isclose as np_isclose
-from numpy import minimum as np_minimum
-from numpy import maximum as np_maximum
 
 
 class SCG(object):
@@ -122,19 +116,6 @@ class SCG(object):
 
     # _end_def_
 
-    @staticmethod
-    @njit(fastmath=True)
-    def fast_sum_abs(x_in: array_t) -> float:
-        """
-        Numba version of numpy functions.
-
-        :param x_in: input array (dim,)
-
-        :return: a much faster version of sum(abs(.)).
-        """
-        return np.sum(np.abs(x_in))
-    # _end_def_
-
     def minimize(self, x0: array_t, *args):
         """
         Performs the minimization of the cost function
@@ -158,8 +139,8 @@ class SCG(object):
         # Localize 'f'.
         func = self.f
 
-        # Localize fast_sum_abs.
-        _fast_sum_abs = SCG.fast_sum_abs
+        # Localize the sum of the abs(x).
+        _local_sum_abs = lambda vec: np.sum(np.abs(vec))
 
         # Localize function.
         _copy_to = np.copyto
@@ -247,7 +228,7 @@ class SCG(object):
                 # _end_if_
 
                 # Update sigma and check the gradient on a new direction.
-                sigma = sigma0 / np_sqrt(kappa)
+                sigma = sigma0 / np.sqrt(kappa)
                 x_plus = x + (sigma * d)
 
                 # We evaluate the df(x_plus).
@@ -311,14 +292,14 @@ class SCG(object):
             # _end_if_
 
             # Total gradient: j-th iteration.
-            total_grad = _fast_sum_abs(g_now)
+            total_grad = _local_sum_abs(g_now)
 
             # Store statistics.
             _stats["fx"][j] = f_now
             _stats["dfx"][j] = total_grad
 
             # Used in verbose/display mode.
-            if self.display and (np_mod(j, 50) == 0):
+            if self.display and (np.mod(j, 50) == 0):
 
                 # Timer snapshot after 'j' iterations.
                 time_tj = perf_counter()
@@ -337,8 +318,8 @@ class SCG(object):
             if success:
 
                 # Check for termination.
-                if (np_abs(alpha * d).max() <= self.x_tol) and\
-                        (np_abs(f_new - f_old) <= self.f_tol):
+                if (np.abs(alpha * d).max() <= self.x_tol) and\
+                        (np.abs(f_new - f_old) <= self.f_tol):
                     # Copy the new value.
                     fx = f_new
 
@@ -364,7 +345,7 @@ class SCG(object):
                     _stats["func_eval"] += 1
 
                     # If the gradient is zero then exit.
-                    if np_isclose(grad_new.T.dot(grad_new), 0.0):
+                    if np.isclose(grad_new.T.dot(grad_new), 0.0):
                         # Copy the new value.
                         fx = f_now
 
@@ -382,11 +363,11 @@ class SCG(object):
 
             # Adjust beta according to comparison ratio.
             if Delta < 0.25:
-                beta = np_minimum(4.0 * beta, beta_max)
+                beta = np.minimum(4.0 * beta, beta_max)
             # _end_if_
 
             if Delta > 0.75:
-                beta = np_maximum(0.5 * beta, beta_min)
+                beta = np.maximum(0.5 * beta, beta_min)
             # _end_if_
 
             # Update search direction using Polak-Ribiere formula
@@ -398,7 +379,7 @@ class SCG(object):
             else:
                 # Check the flag.
                 if success:
-                    gamma = np_maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
+                    gamma = np.maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
                     d = (gamma * d) - grad_new
                 # _end_if_
 

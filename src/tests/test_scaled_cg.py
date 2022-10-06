@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 from numpy.random import default_rng
 from scipy.optimize import approx_fprime

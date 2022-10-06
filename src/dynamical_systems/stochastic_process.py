@@ -1,6 +1,6 @@
 import numpy as np
-from numpy import squeeze
 from numpy import array as array_t
+from numpy import squeeze
 from numpy.random import default_rng
 
 

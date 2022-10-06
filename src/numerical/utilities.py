@@ -1,13 +1,7 @@
+import numpy as np
 from numba import njit
-from numpy import asarray
-from numpy import eye as np_eye
-from numpy import log as np_log
-from numpy import sum as np_sum
-from numpy import diag as np_diag
-from numpy import sqrt as np_sqrt
 from numpy import array as array_t
-from numpy import minimum as np_minimum
-from numpy import maximum as np_maximum
+from numpy import asarray
 from numpy.linalg import solve, cholesky
 
 
@@ -29,13 +23,13 @@ def log_det(x: array_t):
     # If the input is scalar.
     if x.ndim == 0:
         # Return from here with the log.
-        return np_log(x)
+        return np.log(x)
     # _end_if_
 
     # If the input is a 1-D vector.
     if x.ndim == 1:
         # Transform it to diagonal matrix.
-        x = np_diag(x)
+        x = np.diag(x)
     else:
         # Get the number of rows/cols.
         rows, cols = x.shape
@@ -47,7 +41,7 @@ def log_det(x: array_t):
     # _end_if_
 
     # More stable than: log(det(x)).
-    return 2.0 * np_sum(np_log(cholesky(x).diagonal()))
+    return 2.0 * np.sum(np.log(cholesky(x).diagonal()))
 # _end_def_
 
 @njit(fastmath=True)
@@ -81,14 +75,14 @@ def safe_log(x: array_t):
     x = asarray(x)
 
     # Filter out small and large values.
-    x = np_maximum(np_minimum(x, 1.0E+300), 1.0E-300)
+    x = np.maximum(np.minimum(x, 1.0E+300), 1.0E-300)
 
     # Return the log() of the filtered input.
-    return np_log(x)
+    return np.log(x)
 # _end_def_
 
 @njit(fastmath=True)
-def _cholesky_inv_fast_(x: array_t):
+def _cholesky_inv_fast(x: array_t):
     """
     Helper function implemented with numba.
 
@@ -96,7 +90,7 @@ def _cholesky_inv_fast_(x: array_t):
     """
 
     # Invert the Cholesky decomposition.
-    c_inv = solve(cholesky(x), np_eye(x.shape[0]))
+    c_inv = solve(cholesky(x), np.eye(x.shape[0]))
 
     # Invert input matrix.
     x_inv = c_inv.T.dot(c_inv)
@@ -119,17 +113,17 @@ def cholesky_inv(x: array_t):
 
     # Check if the input is scalar.
     if x.ndim == 0:
-        return 1.0 / x, 1.0 / np_sqrt(x)
+        return 1.0 / x, 1.0 / np.sqrt(x)
     else:
 
         # Check if the input is vector.
         if x.ndim == 1:
 
             # Convert it to diagonal matrix.
-            x = np_diag(x)
+            x = np.diag(x)
         # _end_if_
 
-        return _cholesky_inv_fast_(x)
+        return _cholesky_inv_fast(x)
     # _end_if_
 
 # _end_def_

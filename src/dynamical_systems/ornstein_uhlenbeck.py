@@ -1,8 +1,10 @@
-import numpy as np
-from numba import njit
 from pathlib import Path
+
+import numpy as np
 from dill import load as dl_load
+from numba import njit
 from numpy import array as array_t
+
 from dynamical_systems.stochastic_process import StochasticProcess
 
 

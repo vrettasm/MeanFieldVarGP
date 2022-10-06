@@ -1,28 +1,20 @@
-import numpy as np
-
-from numpy import asfarray
-from numpy import abs as np_abs
-from numpy import sum as np_sum
-from numpy import ones as np_ones
-from numpy import full as np_full
-from numpy import zeros as zeros_t
-from numpy import empty as empty_t
-from numpy import array as array_t
-from numpy import reshape as np_reshape
-from numpy import squeeze as np_squeeze
-from numpy import isfinite as np_isfinite
-from numpy import (atleast_1d, atleast_2d)
-
 from time import perf_counter
 
+import numpy as np
+from joblib import (Parallel, delayed, cpu_count)
+from numpy import abs as np_abs
+from numpy import array as array_t
+from numpy import (asfarray,
+                   reshape, squeeze,
+                   atleast_1d, atleast_2d)
+from numpy import empty as empty_t
+from numpy import zeros as zeros_t
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
 
-from joblib import (Parallel, delayed, cpu_count)
-
+from dynamical_systems.stochastic_process import StochasticProcess
 from numerical.scaled_cg import SCG
 from numerical.utilities import (cholesky_inv, log_det)
-from dynamical_systems.stochastic_process import StochasticProcess
 
 
 class FreeEnergy(object):
@@ -310,10 +302,10 @@ class FreeEnergy(object):
         # Energy of the initial moment.
         # NOTE: This formula works only because the matrices 'tau0'
         # and 's0' are diagonal, and we work with vectors.
-        E0 = log_det(self._tau0/s0) + np_sum((z0**2 + s0 - self._tau0) / self._tau0)
+        E0 = log_det(self._tau0/s0) + np.sum((z0**2 + s0 - self._tau0) / self._tau0)
 
         # Sanity check.
-        if not np_isfinite(E0):
+        if not np.isfinite(E0):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" E0 is not a finite number: {E0}")
         # _end_if_
@@ -326,7 +318,7 @@ class FreeEnergy(object):
         # _end_if_
 
         # Auxiliary variable.
-        one_ = np_ones(1)
+        one_ = np.ones(1)
 
         # Compute the gradients. We use the "atleast_1d" to ensure
         # that the scalar cases (even though rare) will be covered.
@@ -393,8 +385,8 @@ class FreeEnergy(object):
         #   2) tj == ti + (2 * c)
         params = (ti, ti + h, ti + (2 * h), tj,
                   ti, ti + c, tj,
-                  *mean_pts.ravel(order='C'),
-                  *vars_pts.ravel(order='C'),
+                  *mean_pts.ravel(),
+                  *vars_pts.ravel(),
                   *sigma, *theta)
 
         # We use the lambda functions here to fix all the
@@ -420,7 +412,7 @@ class FreeEnergy(object):
         if inv_sigma.size == 1:
 
             # Remove singleton dimension.
-            Esde = np_squeeze(inv_sigma*i_En_sde)
+            Esde = squeeze(inv_sigma*i_En_sde)
 
             # Check if we want the gradients.
             if output_gradients:
@@ -540,7 +532,7 @@ class FreeEnergy(object):
         # _end_for_
 
         # Sanity check.
-        if not np_isfinite(Esde):
+        if not np.isfinite(Esde):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Esde is not a finite number: {Esde}")
         # _end_if_
@@ -556,8 +548,8 @@ class FreeEnergy(object):
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
         return Esde,\
-               np_reshape(dEsde_dm, (L, dim_D, 4), order='C'),\
-               np_reshape(dEsde_ds, (L, dim_D, 3), order='C')
+               reshape(dEsde_dm, (L, dim_D, 4)),\
+               reshape(dEsde_ds, (L, dim_D, 3))
     # _end_def_
 
     def E_obs(self, mean_pts: array_t, vars_pts: array_t, output_gradients: bool = True):
@@ -599,7 +591,7 @@ class FreeEnergy(object):
         W = Ri.diagonal().dot(vars_pts)
 
         # Compute observations' energy.
-        Eobs = np_sum(Z.T.dot(Z).diagonal() + W)
+        Eobs = np.sum(Z.T.dot(Z).diagonal() + W)
 
         # Logarithm of 2*pi.
         log2pi = 1.8378770664093453
@@ -608,7 +600,7 @@ class FreeEnergy(object):
         Eobs += self.num_M * (self.dim_d * log2pi + log_det(self.obs_noise))
 
         # Sanity check.
-        if not np_isfinite(Eobs):
+        if not np.isfinite(Eobs):
             raise RuntimeError(f" {self.__class__.__name__}:"
                                f" Eobs is not a finite number: {Eobs}")
         # _end_if_
@@ -626,7 +618,7 @@ class FreeEnergy(object):
 
         # Note that the dEobs(k)/ds(k) is identical for all observations.
         # >> dEobs(k)/ds(k) := 0.5*diag(H'*Ri*H)
-        dEobs_ds = np_full((self.dim_d, self.num_M),
+        dEobs_ds = np.full((self.dim_d, self.num_M),
                            0.5 * atleast_2d(Ri.diagonal()).T, dtype=float)
 
         # Check for 1D observations.
@@ -634,8 +626,8 @@ class FreeEnergy(object):
 
             # Remove singleton dimensions on exit.
             return 0.5 * Eobs,\
-                   np_squeeze(dEobs_dm),\
-                   np_squeeze(dEobs_ds)
+                   squeeze(dEobs_dm),\
+                   squeeze(dEobs_ds)
 
         # _end_if_
 
@@ -671,15 +663,13 @@ class FreeEnergy(object):
         """
 
         # Separate the mean from the variance points.
-        mean_points = np_reshape(x[0:self.num_mp],
-                                 (self.dim_D, (3*self.num_M + 4)),
-                                 order='C')
+        mean_points = reshape(x[0:self.num_mp],
+                              (self.dim_D, (3*self.num_M + 4)))
 
         # The variance points are in log-space to ensure positivity,
         # so we pass them through the exponential function first.
-        vars_points = np_reshape(np.exp(x[self.num_mp:]),
-                                 (self.dim_D, (2*self.num_M + 3)),
-                                 order='C')
+        vars_points = reshape(np.exp(x[self.num_mp:]),
+                              (self.dim_D, (2*self.num_M + 3)))
 
         # Energy (and gradients) from the initial moment (t=0).
         E0, dE0_dm0, dE0_ds0 = self.E_kl0(mean_points[:, 0],
@@ -744,8 +734,8 @@ class FreeEnergy(object):
         # components. NOTE: If we want to optimize the hyperparameter
         # we should add another term, e.g. E_param, and include it in
         # the total sum of energy values.
-        return Ecost, np.concatenate((Ecost_dm.ravel(order='C'),
-                                      Ecost_ds.ravel(order='C')), axis=0)
+        return Ecost, np.concatenate((Ecost_dm.ravel(),
+                                      Ecost_ds.ravel()), axis=0)
     # _end_def_
 
     def find_minimum(self, x0, maxiter: int = 100, x_tol: float = 1.0e-5,
