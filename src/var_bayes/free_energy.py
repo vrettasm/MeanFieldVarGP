@@ -735,7 +735,7 @@ class FreeEnergy(object):
         # Rescale the variance gradients to account for
         # the log-transformation and ensure positivity.
         # NOTE: This is element-wise multiplication !!!
-        Ecost_ds *= vars_points
+        np.multiply(Ecost_ds, vars_points, out=Ecost_ds)
 
         # Return the total (free) energy as the sum of the individual
         # components. NOTE: If we want to optimize the hyperparameter
