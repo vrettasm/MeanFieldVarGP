@@ -140,7 +140,7 @@ class SCG(object):
         func = self.f
 
         # Localize the sum of the abs(x).
-        _local_sum_abs = lambda vec: np.sum(np.abs(vec))
+        _local_sum_abs = lambda vec: np.abs(vec).sum()
 
         # Localize function.
         _copy_to = np.copyto
@@ -158,7 +158,7 @@ class SCG(object):
         f_now, grad_new = func(x, *args)
 
         # Initialize grad_old vector.
-        grad_old = np.copy(grad_new)
+        grad_old = grad_new.copy()
 
         # Increase function evaluations by one.
         _stats["func_eval"] += 1
