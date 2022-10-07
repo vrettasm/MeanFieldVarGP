@@ -5,8 +5,8 @@ from joblib import (Parallel, delayed, cpu_count)
 from numpy import abs as np_abs
 from numpy import array as array_t
 from numpy import (asfarray,
-                   reshape, squeeze,
-                   atleast_1d, atleast_2d)
+                   atleast_1d,
+                   atleast_2d)
 from numpy import empty as empty_t
 from numpy import zeros as zeros_t
 from scipy.integrate import quad_vec
@@ -306,7 +306,7 @@ class FreeEnergy(object):
         #
         # NOTE(2): Since we have diagonal matrices the log(det(X)) can be safely replaced by
         # safe_log(prod(X)).
-        E0 = safe_log(np.prod(self._tau0/s0)) +\
+        E0 = safe_log((self._tau0/s0).prod()) +\
              np.sum((z0**2 + s0 - self._tau0) / self._tau0)
 
         # Sanity check.
@@ -417,7 +417,7 @@ class FreeEnergy(object):
         if inv_sigma.size == 1:
 
             # Remove singleton dimension.
-            Esde = squeeze(inv_sigma*i_En_sde)
+            Esde = (inv_sigma*i_En_sde).squeeze()
 
             # Check if we want the gradients.
             if output_gradients:
@@ -553,8 +553,8 @@ class FreeEnergy(object):
         # and its gradients with respect ot the mean and variance
         # (optimized) points.
         return Esde,\
-               reshape(dEsde_dm, (L, dim_D, 4)),\
-               reshape(dEsde_ds, (L, dim_D, 3))
+               dEsde_dm.reshape((L, dim_D, 4)),\
+               dEsde_ds.reshape((L, dim_D, 3))
     # _end_def_
 
     def E_obs(self, mean_pts: array_t, vars_pts: array_t, output_gradients: bool = True):
@@ -592,11 +592,8 @@ class FreeEnergy(object):
         # Auxiliary quantity (for the E_obs).
         Z = np.multiply(Qi[:, np.newaxis], Y_minus_Hm)
 
-        # Auxiliary quantity (for the E_obs).
-        W = Ri.dot(vars_pts)
-
         # Compute observations' energy.
-        Eobs = np.sum(Z.T.dot(Z).diagonal() + W)
+        Eobs = np.sum(Z.T.dot(Z).diagonal() + Ri.dot(vars_pts))
 
         # Logarithm of 2*pi.
         log2pi = 1.8378770664093453
@@ -604,7 +601,7 @@ class FreeEnergy(object):
         # Final energy value (including the constants).
         # NOTE: Since we have only diagonal matrices the log(det(X)) can be safely
         # replaced by safe_log(prod(X)).
-        Eobs += self.num_M * (self.dim_d * log2pi + safe_log(np.prod(obs_noise)))
+        Eobs += self.num_M * (self.dim_d * log2pi + safe_log(obs_noise.prod()))
 
         # Sanity check.
         if not np.isfinite(Eobs):
@@ -633,8 +630,8 @@ class FreeEnergy(object):
 
             # Remove singleton dimensions on exit.
             return 0.5 * Eobs,\
-                   squeeze(dEobs_dm),\
-                   squeeze(dEobs_ds)
+                   dEobs_dm.squeeze(),\
+                   dEobs_ds.squeeze()
 
         # _end_if_
 
@@ -670,13 +667,13 @@ class FreeEnergy(object):
         """
 
         # Separate the mean from the variance points.
-        mean_points = reshape(x[0:self.num_mp],
-                              (self.dim_D, (3*self.num_M + 4)))
+        mean_points = x[0:self.num_mp].reshape((self.dim_D,
+                                                (3*self.num_M + 4)))
 
         # The variance points are in log-space to ensure positivity,
         # so we pass them through the exponential function first.
-        vars_points = reshape(np.exp(x[self.num_mp:]),
-                              (self.dim_D, (2*self.num_M + 3)))
+        vars_points = np.exp(x[self.num_mp:].reshape((self.dim_D,
+                                                      (2*self.num_M + 3))))
 
         # Energy (and gradients) from the initial moment (t=0).
         E0, dE0_dm0, dE0_ds0 = self.E_kl0(mean_points[:, 0],
