@@ -4,9 +4,8 @@ import numpy as np
 from joblib import (Parallel, delayed, cpu_count)
 from numpy import abs as np_abs
 from numpy import array as array_t
-from numpy import (asfarray,
-                   atleast_1d,
-                   atleast_2d)
+from numpy import (atleast_1d, atleast_2d,
+                   asfarray, maximum, minimum)
 from numpy import empty as empty_t
 from numpy import zeros as zeros_t
 from scipy.integrate import quad_vec
@@ -131,7 +130,7 @@ class FreeEnergy(object):
         n_jobs = int(n_jobs)
 
         # Assign the required CPUs to a local variable.
-        self.n_jobs = FreeEnergy.MAX_CPUs if n_jobs < 1 else np.minimum(n_jobs, FreeEnergy.MAX_CPUs)
+        self.n_jobs = FreeEnergy.MAX_CPUs if n_jobs < 1 else minimum(n_jobs, FreeEnergy.MAX_CPUs)
 
         # Infer the observations dimensions.
         if self.obs_values.ndim in (0, 1):
@@ -804,9 +803,9 @@ class FreeEnergy(object):
 
         # Ensure optimization variables have the correct types.
         # Put lower limits to them to avoid invalid entries.
-        maxiter = np.maximum(int(maxiter), 10)
-        x_tol = np.maximum(float(x_tol), 1.0e-20)
-        f_tol = np.maximum(float(f_tol), 1.0e-20)
+        maxiter = maximum(int(maxiter), 10)
+        x_tol = maximum(float(x_tol), 1.0e-20)
+        f_tol = maximum(float(f_tol), 1.0e-20)
 
         # Setup SCG options.
         options = {"max_it": maxiter, "x_tol": x_tol, "f_tol": f_tol,

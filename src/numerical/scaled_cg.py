@@ -1,8 +1,9 @@
 from time import perf_counter
 
 import numpy as np
+from numpy import asfarray
 from numpy import array as array_t
-
+from numpy import maximum, minimum
 
 class SCG(object):
     """
@@ -146,7 +147,7 @@ class SCG(object):
         _copy_to = np.copyto
 
         # Make sure input is flat.
-        x = x0.flatten()
+        x = asfarray(x0).flatten()
 
         # Size of input array.
         dim_x = x.size
@@ -319,7 +320,7 @@ class SCG(object):
 
                 # Check for termination.
                 if (np.abs(alpha * d).max() <= self.x_tol) and\
-                        (np.abs(f_new - f_old) <= self.f_tol):
+                        (np.abs(f_new - f_old).max() <= self.f_tol):
                     # Copy the new value.
                     fx = f_new
 
@@ -363,11 +364,11 @@ class SCG(object):
 
             # Adjust beta according to comparison ratio.
             if Delta < 0.25:
-                beta = np.minimum(4.0 * beta, beta_max)
+                beta = minimum(4.0 * beta, beta_max)
             # _end_if_
 
             if Delta > 0.75:
-                beta = np.maximum(0.5 * beta, beta_min)
+                beta = maximum(0.5 * beta, beta_min)
             # _end_if_
 
             # Update search direction using Polak-Ribiere formula
@@ -379,7 +380,7 @@ class SCG(object):
             else:
                 # Check the flag.
                 if success:
-                    gamma = np.maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
+                    gamma = maximum(grad_new.T.dot(grad_old - grad_new) / mu, 0.0)
                     d = (gamma * d) - grad_new
                 # _end_if_
 
