@@ -306,7 +306,7 @@ class FreeEnergy(object):
         # NOTE(2): Since we have diagonal matrices the log(det(X)) can be safely replaced by
         # safe_log(prod(X)).
         E0 = safe_log((self._tau0/s0).prod()) +\
-             np.sum((z0**2 + s0 - self._tau0) / self._tau0)
+             ((z0**2 + s0 - self._tau0) / self._tau0).sum()
 
         # Sanity check.
         if not np.isfinite(E0):
