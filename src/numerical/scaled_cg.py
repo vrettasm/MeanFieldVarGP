@@ -3,7 +3,7 @@ from time import perf_counter
 import numpy as np
 from numpy import asfarray
 from numpy import array as array_t
-from numpy import maximum, minimum
+from numpy import maximum
 
 class SCG(object):
     """
@@ -364,11 +364,11 @@ class SCG(object):
 
             # Adjust beta according to comparison ratio.
             if Delta < 0.25:
-                beta = minimum(4.0 * beta, beta_max)
+                beta = min(4.0 * beta, beta_max)
             # _end_if_
 
             if Delta > 0.75:
-                beta = maximum(0.5 * beta, beta_min)
+                beta = max(0.5 * beta, beta_min)
             # _end_if_
 
             # Update search direction using Polak-Ribiere formula
