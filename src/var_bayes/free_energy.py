@@ -29,7 +29,7 @@ class FreeEnergy(object):
 
     def __init__(self, sde: StochasticProcess, mu0: np.ndarray, tau0: np.ndarray,
                  obs_times: np.ndarray, obs_values: np.ndarray, obs_noise: np.ndarray,
-                 obs_mask: list = None, n_jobs: int = 1):
+                 obs_mask: list = None, n_jobs: int = 1) -> None:
         """
         Default constructor of the FreeEnergy class.
 
