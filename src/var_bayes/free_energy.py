@@ -1,20 +1,19 @@
 from time import perf_counter
+from joblib import (cpu_count,
+                    Parallel,
+                    delayed)
 
 import numpy as np
-from joblib import (Parallel, delayed, cpu_count)
-
-from numpy import abs as np_abs
-from numpy import array as array_t
-from numpy import empty as empty_t
-from numpy import zeros as zeros_t
-from numpy import (atleast_1d, atleast_2d, asfarray)
+from numpy import (atleast_1d,
+                   atleast_2d,
+                   asfarray)
 
 from scipy.integrate import quad_vec
 from scipy.optimize import check_grad
 
-from dynamical_systems.stochastic_process import StochasticProcess
-from numerical.scaled_cg import SCG
-from numerical.utilities import safe_log
+from src.dynamical_systems.stochastic_process import StochasticProcess
+from src.numerical.scaled_cg import SCG
+from src.numerical.utilities import safe_log
 
 
 class FreeEnergy(object):
@@ -28,8 +27,8 @@ class FreeEnergy(object):
                  "obs_mask", "dim_D", "dim_d", "num_M", "num_mp", "ikm", "iks",
                  "ix_ikm", "ix_iks", "n_jobs")
 
-    def __init__(self, sde: StochasticProcess, mu0: array_t, tau0: array_t,
-                 obs_times: array_t, obs_values: array_t, obs_noise: array_t,
+    def __init__(self, sde: StochasticProcess, mu0: np.ndarray, tau0: np.ndarray,
+                 obs_times: np.ndarray, obs_values: np.ndarray, obs_noise: np.ndarray,
                  obs_mask: list = None, n_jobs: int = 1):
         """
         Default constructor of the FreeEnergy class.
@@ -66,7 +65,7 @@ class FreeEnergy(object):
         # SDE with respect to the variance points.
         self.grad_fun_vp = sde.grad_variance
 
-        # Prior mean (t=0).
+        # Prior mean values (t=0).
         self._mu0 = asfarray(mu0)
 
         # Prior variance diagonal elements (t=0).
@@ -180,7 +179,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @property
-    def prior_mu0(self):
+    def prior_mu0(self) -> np.ndarray:
         """
         Accessor method (getter).
 
@@ -190,7 +189,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @prior_mu0.setter
-    def prior_mu0(self, new_value: array_t):
+    def prior_mu0(self, new_value: np.ndarray) -> None:
         """
         Accessor method (setter).
 
@@ -205,7 +204,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @property
-    def prior_tau0(self):
+    def prior_tau0(self) -> np.ndarray:
         """
         Accessor method (getter).
 
@@ -215,7 +214,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @prior_tau0.setter
-    def prior_tau0(self, new_value: array_t):
+    def prior_tau0(self, new_value: np.ndarray) -> None:
         """
         Accessor method (setter).
 
@@ -230,7 +229,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @property
-    def sde_theta(self):
+    def sde_theta(self) -> np.ndarray:
         """
         Accessor method (getter).
 
@@ -240,7 +239,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @sde_theta.setter
-    def sde_theta(self, new_value: array_t):
+    def sde_theta(self, new_value: np.ndarray) -> None:
         """
         Accessor method (setter).
 
@@ -255,7 +254,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @property
-    def sde_sigma(self):
+    def sde_sigma(self) -> np.ndarray:
         """
         Accessor method (getter).
 
@@ -265,7 +264,7 @@ class FreeEnergy(object):
     # _end_def_
 
     @sde_sigma.setter
-    def sde_sigma(self, new_value: array_t):
+    def sde_sigma(self, new_value: np.ndarray):
         """
         Accessor method (setter).
 
@@ -279,21 +278,22 @@ class FreeEnergy(object):
         self.sigma = asfarray(new_value)
     # _end_def_
 
-    def E_kl0(self, m0: array_t, s0: array_t, output_gradients: bool = True):
+    def E_kl0(self, m0: np.ndarray, s0: np.ndarray,
+              output_gradients: bool = True):
         """
-        Energy of the initial state with a Gaussian
-        prior q(x|t=0).
+        Energy of the initial state with a Gaussian prior q(x|t=0).
 
         :param m0: marginal mean at t=0, (dim_D).
 
         :param s0: marginal variance at t=0, (dim_D).
 
-        :param output_gradients: boolean flag to whether include, or not the
-        gradients in the output. This is used when the optimize method requires
-        as output only the function f(x) or also the gradient df(x)/dx.
+        :param output_gradients: boolean flag to whether include,
+        or not the gradients in the output. This is used when the
+        optimize method requires as output only the function f(x)
+        or also the gradient df(x)/dx.
 
-        :return: energy of the initial state E0, (scalar) and its derivatives
-        with respect to 'm0' and 's0'.
+        :return: energy of the initial state E0, (scalar) and its
+        derivatives with respect to 'm0' and 's0'.
         """
 
         # Difference of the two "mean" vectors.
@@ -333,19 +333,25 @@ class FreeEnergy(object):
         # Kullback-Liebler and its derivatives at
         # time t=0, (i.e. dE0/dm(0), dE0/ds(0))
         return 0.5 * E0, dE0_dm0, dE0_ds0
-
     # _end_def_
 
     @staticmethod
-    def single_interval(n_th: int, ti: float, tj: float, energy_func: callable, gradMP_func: callable,
-                        gradSP_func: callable, mean_pts: array_t, vars_pts: array_t, sigma: array_t,
-                        theta: array_t, inv_sigma: array_t, output_gradients: bool = True):
+    def single_interval(n_th: int, ti: float, tj: float,
+                        energy_func: callable,
+                        gradMP_func: callable,
+                        gradSP_func: callable,
+                        mean_pts: np.ndarray,
+                        vars_pts: np.ndarray,
+                        sigma: np.ndarray,
+                        theta: np.ndarray,
+                        inv_sigma: np.ndarray,
+                        output_gradients: bool = True):
         """
-        This static method computes the integrated values of the Esde and its gradients for a single
-        time interval [ti, tj].
+        This static method computes the integrated values of the Esde and its gradients
+        for a single time interval [ti, tj].
 
-        :param n_th: this integer value represent the n-th interval of integration. It is used mainly
-        to guarantee the order in which we return the values from the Parallel loop.
+        :param n_th: this integer value represent the n-th interval of integration. It is
+        used mainly to guarantee the order in which we return the values from the Parallel loop.
 
         :param ti: this is the first limit of integration in the [ti, tj] interval.
 
@@ -377,7 +383,7 @@ class FreeEnergy(object):
         # NOTE: This should not change for equally spaced
         # observations. This is here to ensure that small
         # 'dt' deviations will not affect the algorithm.
-        delta_t = np_abs(tj-ti)
+        delta_t = np.abs(tj-ti)
 
         # Mid-point intervals (for the evaluation of the Esde function).
         # NOTE: These should not change for equally spaced observations.
@@ -436,7 +442,6 @@ class FreeEnergy(object):
 
             # Check if we want the gradients.
             if output_gradients:
-
                 # NOTE: the correct dimensions are (D x 4).
                 dEsde_dm = 0.5 * inv_sigma.dot(i_dEn_dm)
 
@@ -453,7 +458,8 @@ class FreeEnergy(object):
         return n_th, 0.5 * Esde, dEsde_dm, dEsde_ds
     # _end_def_
 
-    def E_sde(self, mean_pts: array_t, vars_pts: array_t, output_gradients: bool = True):
+    def E_sde(self, mean_pts: np.ndarray, vars_pts: np.ndarray,
+              output_gradients: bool = True):
         """
         Energy from the SDE prior process.
 
@@ -461,12 +467,13 @@ class FreeEnergy(object):
 
         :param vars_pts: optimized variance points.
 
-        :param output_gradients: boolean flag to whether include, or not the gradients in
-        the output. This is used when the optimize method requires as output only the f(x)
-        function, or also the gradient df(x)/dx.
+        :param output_gradients: boolean flag to whether include,
+        or not the gradients in the output. This is used when the
+        optimize method requires as output only the f(x) function,
+        or also the gradient df(x)/dx.
 
-        :return: Energy from the SDE prior process (scalar) and its gradients with respect
-        to the mean & variance points.
+        :return: Energy from the SDE prior process (scalar) and its
+        gradients with respect to the mean & variance points.
         """
 
         # Local copy of the single interval function.
@@ -506,8 +513,8 @@ class FreeEnergy(object):
             # Initialize the gradients arrays.
             # -> dEsde_dm := dEsde(tk)/dm(tk)
             # -> dEsde_ds := dEsde(tk)/ds(tk)
-            dEsde_dm = empty_t((L, 4 * dim_D), dtype=float)
-            dEsde_ds = empty_t((L, 3 * dim_D), dtype=float)
+            dEsde_dm = np.empty((L, 4 * dim_D), dtype=float)
+            dEsde_ds = np.empty((L, 3 * dim_D), dtype=float)
         else:
             dEsde_dm, dEsde_ds = None, None
         # _end_if_
@@ -557,7 +564,8 @@ class FreeEnergy(object):
                dEsde_ds.reshape((L, dim_D, 3))
     # _end_def_
 
-    def E_obs(self, mean_pts: array_t, vars_pts: array_t, output_gradients: bool = True):
+    def E_obs(self, mean_pts: np.ndarray, vars_pts: np.ndarray,
+              output_gradients: bool = True):
         """
         Energy from the Gaussian likelihood.
 
@@ -565,14 +573,14 @@ class FreeEnergy(object):
 
         :param vars_pts: optimized variance points.
 
-        :param output_gradients: boolean flag to whether include, or not the gradients in
-        the output. This is used when the optimize method requires as output only the f(x)
-        function, or also the gradient df(x)/dx.
+        :param output_gradients: boolean flag to whether include,
+        or not the gradients in the output. This is used when the
+        optimize method requires as output only the f(x) function,
+        or also the gradient df(x)/dx.
 
-        :return: Energy from the observation likelihood (scalar) and its gradients with
-        respect to the mean and variance points.
+        :return: Energy from the observation likelihood (scalar)
+        and its gradients with respect to the mean and variance points.
         """
-
         # Sanity check.
         obs_noise = atleast_1d(self.obs_noise)
 
@@ -640,7 +648,7 @@ class FreeEnergy(object):
         return 0.5 * Eobs, dEobs_dm, dEobs_ds
     # _end_def_
 
-    def E_cost(self, x, output_gradients: bool = True):
+    def E_cost(self, x: np.ndarray, output_gradients: bool = True):
         """
         Total cost function value (scalar) and derivatives.
         This is passed to the "scaled_cg" optimization:
@@ -700,8 +708,8 @@ class FreeEnergy(object):
         # _end_if_
 
         # Put all gradients together.
-        Ecost_dm = zeros_t((self.dim_D, 3 * self.num_M + 4), dtype=float)
-        Ecost_ds = zeros_t((self.dim_D, 2 * self.num_M + 3), dtype=float)
+        Ecost_dm = np.zeros((self.dim_D, 3 * self.num_M + 4), dtype=float)
+        Ecost_ds = np.zeros((self.dim_D, 2 * self.num_M + 3), dtype=float)
 
         # Copy the gradients of the first interval.
         Ecost_dm[:, 0:4] = dEsde_dm[0]
@@ -742,8 +750,9 @@ class FreeEnergy(object):
                                       Ecost_ds.ravel()), axis=0)
     # _end_def_
 
-    def find_minimum(self, x0, maxiter: int = 100, x_tol: float = 1.0e-5,
-                     f_tol: float = 1.0e-5, check_gradients=False, verbose=False):
+    def find_minimum(self, x0, max_iter: int = 100, x_tol: float = 1.0e-5,
+                     f_tol: float = 1.0e-5, check_gradients: bool = False,
+                     verbose: bool = False):
         """
         Optimizes the free energy value (E_cost) by using the Scaled
         Conjugate Gradient (SGC) optimizer. The result is the final
@@ -751,7 +760,7 @@ class FreeEnergy(object):
 
         :param x0: initial set of variables to start the minimization.
 
-        :param maxiter: (int) number of iterations in the minimization.
+        :param max_iter: (int) number of iterations in the minimization.
 
         :param x_tol: (float) tolerance between two successive solutions
         x_{k} and x_{k+1}.
@@ -768,7 +777,7 @@ class FreeEnergy(object):
         :return: the optimal solution found by SGC().
         """
 
-        def _analytic_grad_func(xin: array_t):
+        def _analytic_grad_func(xin: np.ndarray):
             """
             Locally defined gradient function.
 
@@ -780,16 +789,15 @@ class FreeEnergy(object):
 
             # Runs the E_cost() with the default
             # setting (i.e. output_gradients=True).
-            _, grad_A = self.E_cost(xin)
+            _, grad_a = self.E_cost(xin)
 
             # Get the "analytic" gradient.
-            return grad_A
+            return grad_a
 
         # _end_def_
 
         # Check numerically the gradients.
         if check_gradients:
-
             # Display the action.
             print("Grad-Check |BEFORE| minimization ...")
 
@@ -804,12 +812,12 @@ class FreeEnergy(object):
 
         # Ensure optimization variables have the correct types.
         # Put lower limits to them to avoid invalid entries.
-        maxiter = max(int(maxiter), 10)
+        max_iter = max(int(max_iter), 10)
         x_tol = max(float(x_tol), 1.0e-20)
         f_tol = max(float(f_tol), 1.0e-20)
 
         # Setup SCG options.
-        options = {"max_it": maxiter, "x_tol": x_tol, "f_tol": f_tol,
+        options = {"max_it": max_iter, "x_tol": x_tol, "f_tol": f_tol,
                    "display": verbose}
 
         # Create an SCG optimizer.
@@ -833,7 +841,6 @@ class FreeEnergy(object):
 
         # Check numerically the gradients.
         if check_gradients:
-
             # Display the action.
             print("Grad-Check |AFTER| minimization ...")
 
@@ -844,7 +851,6 @@ class FreeEnergy(object):
             # Display the error.
             print(f" > Error = {error_tf:.3E}")
             print("------------------------------------\n")
-
         # _end_if_
 
         # Final message.
@@ -854,7 +860,6 @@ class FreeEnergy(object):
         # We also return a copy of the SCG
         # statistics for further analysis.
         return opt_x, opt_fx, scg_minimize.stats
-
     # _end_def_
 
 # _end_class_
