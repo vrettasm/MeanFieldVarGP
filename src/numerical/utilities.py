@@ -1,11 +1,10 @@
 import numpy as np
 from numba import njit
-from numpy import array as array_t
 from numpy import asarray
 from numpy.linalg import (slogdet, solve, cholesky)
 
 
-def log_det(x: array_t):
+def log_det(x: np.ndarray) -> np.ndarray:
     """
     Returns the log(det(x)), but more stable and accurate.
 
@@ -41,7 +40,7 @@ def log_det(x: array_t):
 # _end_def_
 
 @njit(fastmath=True)
-def safe_log(x: array_t):
+def safe_log(x: np.ndarray) -> np.ndarray:
     """
     This function prevents the computation of very small,
     or very large values of logarithms that would lead to
@@ -78,7 +77,7 @@ def safe_log(x: array_t):
 # _end_def_
 
 @njit(fastmath=True)
-def _fast_cholesky_inv(x: array_t):
+def _fast_cholesky_inv(x: np.ndarray) -> np.ndarray:
     """
     Inverts an input array (matrix) using Cholesky decomposition.
 
@@ -94,7 +93,7 @@ def _fast_cholesky_inv(x: array_t):
     return x_inv, c_inv
 # _end_def_
 
-def cholesky_inv(x: array_t):
+def cholesky_inv(x: np.ndarray):
     """
     Inverts an input array (matrix) using Cholesky decomposition.
 

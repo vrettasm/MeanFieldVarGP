@@ -2,7 +2,6 @@ from time import perf_counter
 
 import numpy as np
 from numpy import asfarray
-from numpy import array as array_t
 from numpy import maximum
 
 class SCG(object):
@@ -21,9 +20,9 @@ class SCG(object):
     supervised learning". Neural Networks, Volume 6, Issue 4, pp:525-533.
     """
 
-    __slots__ = ("f", "max_it", "x_tol", "f_tol", "display", "stats")
+    __slots__ = ("f", "_max_it", "_x_tol", "_f_tol", "display", "_stats")
 
-    def __init__(self, func: callable, *args):
+    def __init__(self, func: callable, *args) -> None:
         """
         Default constructor the SCG class. It sets up the parameters
         for the optimization, such as: 1) number of max iterations,
@@ -39,85 +38,73 @@ class SCG(object):
         p_list = args[0] if args else {}
 
         # The function must be callable object.
-        if callable(func):
-
-            # Copy the function.
-            self.f = func
-
-        else:
+        if not callable(func):
             raise TypeError(f"{self.__class__.__name__}: "
                             f"Function {func} must be callable.")
-        # _end_if_
+        # Copy the function.
+        self.f = func
 
         # Maximum number of iterations.
-        self.max_it = p_list["max_it"] if "max_it" in p_list else 500
+        self._max_it = p_list["max_it"] if "max_it" in p_list else 500
 
         # Error tolerance in 'x'.
-        self.x_tol = p_list["x_tol"] if "x_tol" in p_list else 1.0e-6
+        self._x_tol = p_list["x_tol"] if "x_tol" in p_list else 1.0e-6
 
         # Error tolerance in 'fx'.
-        self.f_tol = p_list["f_tol"] if "f_tol" in p_list else 1.0e-8
+        self._f_tol = p_list["f_tol"] if "f_tol" in p_list else 1.0e-8
 
         # Display statistics flag.
         self.display = p_list["display"] if "display" in p_list else False
 
         # Statistics dictionary.
-        self.stats = None
-
+        self._stats = None
     # _end_def_
 
     @property
-    def maxit(self):
+    def max_it(self) -> int:
         """
         Maximum number of iterations.
 
         :return: the 'max_it' parameter.
         """
-        return self.max_it
-
+        return self._max_it
     # _end_def_
 
     @property
-    def xtol(self):
+    def x_tol(self) -> float:
         """
         Tolerance in 'x'.
 
         :return: the 'x_tol' parameter.
         """
-        return self.x_tol
-
+        return self._x_tol
     # _end_def_
 
     @property
-    def ftol(self):
+    def f_tol(self) -> float:
         """
         Tolerance in 'f(x)'.
 
         :return: the 'f_tol' parameter.
         """
-        return self.f_tol
-
+        return self._f_tol
     # _end_def_
 
     @property
-    def statistics(self):
+    def statistics(self) -> dict:
         """
         Accessor method.
 
         :return: the statistics dictionary.
         """
-
         # Sanity check.
-        if self.stats is None:
+        if self._stats is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Stats dictionary has not been created.")
-        # _end_if_
-
-        return self.stats
-
+        return self._stats
     # _end_def_
 
-    def minimize(self, x0: array_t, *args):
+    def minimize(self, x0: np.ndarray, *args):
         """
         Performs the minimization of the cost function
         "f" from a given starting point "x0".
@@ -129,13 +116,12 @@ class SCG(object):
         :return: 1)  x: the point where the minimum was found
                  2) fx: the function value (at the minimum point)
         """
-
         # Reset the stats in the object.
-        self.stats = None
+        self._stats = None
 
         # Local dictionary with statistical information.
-        _stats = {"nit": self.max_it, "fx": np.zeros(self.max_it, dtype=float),
-                  "dfx": np.zeros(self.max_it, dtype=float), "func_eval": 0}
+        _stats = {"nit": self._max_it, "fx": np.zeros(self._max_it, dtype=float),
+                  "dfx": np.zeros(self._max_it, dtype=float), "func_eval": 0}
 
         # Localize 'f'.
         func = self.f
@@ -197,7 +183,7 @@ class SCG(object):
         time_t0 = perf_counter()
 
         # Main optimization loop.
-        for j in range(self.max_it):
+        for j in range(self._max_it):
 
             # Calculate 1-st and 2-nd
             # directional derivatives.
@@ -222,7 +208,7 @@ class SCG(object):
                     _stats["nit"] = j + 1
 
                     # Update object stats.
-                    self.stats = _stats
+                    self._stats = _stats
 
                     # Exit from here.
                     return x, fx
@@ -289,7 +275,6 @@ class SCG(object):
 
                 # Update the gradient vector.
                 _copy_to(g_now, grad_old)
-
             # _end_if_
 
             # Total gradient: j-th iteration.
@@ -312,15 +297,14 @@ class SCG(object):
 
                 # Assign the current time to 't0'.
                 time_t0 = time_tj
-
             # _end_if_
 
             # Check for success.
             if success:
 
                 # Check for termination.
-                if (np.abs(alpha * d).max() <= self.x_tol) and\
-                        (np.abs(f_new - f_old).max() <= self.f_tol):
+                if (np.abs(alpha * d).max() <= self._x_tol) and\
+                        (np.abs(f_new - f_old).max() <= self._f_tol):
                     # Copy the new value.
                     fx = f_new
 
@@ -328,7 +312,7 @@ class SCG(object):
                     _stats["nit"] = j + 1
 
                     # Update object stats.
-                    self.stats = _stats
+                    self._stats = _stats
 
                     # Exit.
                     return x, fx
@@ -354,7 +338,7 @@ class SCG(object):
                         _stats["nit"] = j + 1
 
                         # Update object stats.
-                        self.stats = _stats
+                        self._stats = _stats
 
                         # Exit.
                         return x, fx
@@ -389,13 +373,13 @@ class SCG(object):
         # _end_for_
 
         # Display a final (warning) to the user.
-        print(f"SGC: Maximum number of iterations ({self.max_it}) has been reached.")
+        print(f"SGC: Maximum number of iterations ({self._max_it}) has been reached.")
 
         # Here we have reached the maximum number of iterations.
         fx = f_old
 
         # Update object stats.
-        self.stats = _stats
+        self._stats = _stats
 
         # Exit from here.
         return x, fx
@@ -409,7 +393,7 @@ class SCG(object):
         return self.minimize(*args, **kwargs)
     # _end_def_
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Override to print a readable string presentation
         of the object. This will include its id(), along
@@ -417,10 +401,9 @@ class SCG(object):
 
         :return: a string representation of a SCG object.
         """
-
         return f"SCG Id({id(self)}): "\
-               f"Function={self.f}, Max-It={self.max_it}, " \
-               f"x-tol={self.x_tol}, f-tol={self.f_tol}"
+               f"Function={self.f}, Max-It={self._max_it}, " \
+               f"x-tol={self._x_tol}, f-tol={self._f_tol}"
     # _end_def_
 
 # _end_class_

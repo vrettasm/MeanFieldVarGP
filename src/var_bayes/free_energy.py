@@ -833,7 +833,7 @@ class FreeEnergy(object):
         time_tf = perf_counter()
 
         # Extract the actual number of iterations.
-        num_it = scg_minimize.stats["nit"]
+        num_it = scg_minimize._stats["nit"]
 
         # Print final duration in seconds.
         print(f"Elapsed time [{num_it}]: "
@@ -856,10 +856,9 @@ class FreeEnergy(object):
         # Final message.
         print("Done!")
 
-        # Get the final (optimal) results.
-        # We also return a copy of the SCG
-        # statistics for further analysis.
-        return opt_x, opt_fx, scg_minimize.stats
+        # Get the final optimal results. We also return a
+        # copy of the SCG statistics for further analysis.
+        return opt_x, opt_fx, scg_minimize.statistics
     # _end_def_
 
 # _end_class_
