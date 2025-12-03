@@ -1,11 +1,9 @@
-from pathlib import Path
-
 import numpy as np
-from dill import load as dl_load
 from numba import njit
-from numpy import array as array_t
+from pathlib import Path
+from dill import load as dl_load
 
-from dynamical_systems.stochastic_process import StochasticProcess
+from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
 class OrnsteinUhlenbeck(StochasticProcess):
@@ -16,7 +14,8 @@ class OrnsteinUhlenbeck(StochasticProcess):
     https://en.wikipedia.org/wiki/Ornstein%E2%80%93Uhlenbeck_process
     """
 
-    def __init__(self, sigma: float, theta: array_t, r_seed: int = None):
+    def __init__(self, sigma: float, theta: np.ndarray,
+                 r_seed: int = None) -> None:
         """
         Default constructor of the Ornstein-Uhlenbeck (OU) object.
 
@@ -40,7 +39,8 @@ class OrnsteinUhlenbeck(StochasticProcess):
         self._load_functions()
     # _end_def_
 
-    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
+    def make_trajectory(self, t0: float, tf: float,
+                        dt: float = 0.01) -> None:
         """
         Generates a realizations of the Ornstein-Uhlenbeck (OU)
         dynamical system within a specified time-window [t0-tf].
@@ -84,7 +84,7 @@ class OrnsteinUhlenbeck(StochasticProcess):
         self.time_window = tk
     # _end_def_
 
-    def _load_functions(self):
+    def _load_functions(self) -> None:
         """
         Auxiliary method that loads the symbolic (lambdafied)
         energy and gradient equations for the Ornstein-Uhlenbeck.

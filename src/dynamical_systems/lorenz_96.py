@@ -1,16 +1,13 @@
-from pathlib import Path
-
 import numpy as np
-from dill import load as dl_load
 from numba import njit
-from numpy import array as array_t
-from numpy import zeros as zeros_t
+from pathlib import Path
+from dill import load as dl_load
 
-from dynamical_systems.stochastic_process import StochasticProcess
+from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
 @njit
-def _l96(x: array_t, u: array_t) -> array_t:
+def _l96(x: np.ndarray, u: np.ndarray) -> np.ndarray:
     """
     Auxiliary Lorenz 96 model function.
 
@@ -42,8 +39,8 @@ class Lorenz96(StochasticProcess):
 
     __slots__ = ("dim_D",)
 
-    def __init__(self, sigma: array_t, theta: array_t,
-                 dim_D: int = 40, r_seed: int = None):
+    def __init__(self, sigma: np.ndarray, theta: np.ndarray,
+                 dim_D: int = 40, r_seed: int = None) -> None:
         """
         Default constructor of the L96 object.
 
@@ -101,10 +98,10 @@ class Lorenz96(StochasticProcess):
 
         # Load the energy functions.
         self._load_functions()
-
     # _end_def_
 
-    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
+    def make_trajectory(self, t0: float, tf: float,
+                        dt: float = 0.01) -> None:
         """
         Generates a realizations of the Lorenz96 dynamical system within
         a specified time-window [t0, tf].
@@ -239,7 +236,7 @@ class Lorenz96(StochasticProcess):
         # _end_def_
 
         @njit(inline="always")
-        def _unpack_args(args: array_t):
+        def _unpack_args(args: np.ndarray):
             """
             Local function that unpacks the list of arguments.
             Compiled with numba for faster execution.
@@ -268,16 +265,16 @@ class Lorenz96(StochasticProcess):
             return time_vars, mp, sp, sigma, theta
         # _end_def_
 
-        def _l96_En(t, *args):
+        def _l96_En(t: float, *args):
 
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(np.array(args))
 
             # Collect all the function values in this array.
-            f_values = zeros_t(D, dtype=float)
+            f_values = np.zeros(D, dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(D)), dtype=int)
+            circ_idx = np.array(_circular_index(np.arange(D)), dtype=int)
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -302,16 +299,16 @@ class Lorenz96(StochasticProcess):
         # Add the energy function.
         self.Esde.append(_l96_En)
 
-        def _l96_dEn_dm(t, *args):
+        def _l96_dEn_dm(t: float, *args):
 
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(np.array(args))
 
             # Collect all the gradient values in this array.
-            f_values = zeros_t((D, D * 4), dtype=float)
+            f_values = np.zeros((D, D * 4), dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(D)), dtype=int)
+            circ_idx = np.array(_circular_index(np.arange(D)), dtype=int)
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -342,16 +339,16 @@ class Lorenz96(StochasticProcess):
         # Add the gradient function.
         self.dEsde_dm.append(_l96_dEn_dm)
 
-        def _l96_dEn_ds(t, *args):
+        def _l96_dEn_ds(t: float, *args):
 
             # Unpack the arguments.
-            time_vars, mp, sp, sigma, theta = _unpack_args(array_t(args))
+            time_vars, mp, sp, sigma, theta = _unpack_args(np.array(args))
 
             # Collect all the gradient values in this array.
-            f_values = zeros_t((D, D * 3), dtype=float)
+            f_values = np.zeros((D, D * 3), dtype=float)
 
             # Get ALL the circular indexes first.
-            circ_idx = array_t(_circular_index(np.arange(D)), dtype=int)
+            circ_idx = np.array(_circular_index(np.arange(D)), dtype=int)
 
             # Iterate through all the system dimensions.
             for i in range(D):
@@ -381,7 +378,6 @@ class Lorenz96(StochasticProcess):
 
         # Add the gradient function.
         self.dEsde_ds.append(_l96_dEn_ds)
-
     # _end_def_
 
     def _load_functions(self):
@@ -422,7 +418,6 @@ class Lorenz96(StochasticProcess):
 
         # Construct the functions here.
         self._construct_functions(_func_En, _func_dM, _func_dS)
-
     # _end_def_
 
 # _end_class_

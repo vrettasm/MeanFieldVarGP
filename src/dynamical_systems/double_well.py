@@ -1,10 +1,9 @@
-from pathlib import Path
-
 import numpy as np
-from dill import load as dl_load
 from numba import njit
+from pathlib import Path
+from dill import load as dl_load
 
-from dynamical_systems.stochastic_process import StochasticProcess
+from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
 class DoubleWell(StochasticProcess):
@@ -14,7 +13,8 @@ class DoubleWell(StochasticProcess):
     https://en.wikipedia.org/wiki/Double-well_potential
     """
 
-    def __init__(self, sigma: float, theta: float, r_seed: int = None):
+    def __init__(self, sigma: float, theta: float,
+                 r_seed: int = None) -> None:
         """
         Default constructor of the DoubleWell (DW) object.
 
@@ -38,7 +38,8 @@ class DoubleWell(StochasticProcess):
         self._load_functions()
     # _end_def_
 
-    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
+    def make_trajectory(self, t0: float, tf: float,
+                        dt: float = 0.01) -> None:
         """
         Generates a realizations of the double well (DW)
         dynamical system, within a specified time-window.

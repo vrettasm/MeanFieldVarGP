@@ -1,15 +1,13 @@
-from pathlib import Path
-
 import numpy as np
-from dill import load as dl_load
 from numba import njit
-from numpy import array as array_t
+from pathlib import Path
+from dill import load as dl_load
 
-from dynamical_systems.stochastic_process import StochasticProcess
+from src.dynamical_systems.stochastic_process import StochasticProcess
 
 
 @njit
-def _l63(state: array_t, theta: array_t) -> array_t:
+def _l63(state: np.ndarray, theta: np.ndarray) -> np.ndarray:
     """
     Lorenz63 auxiliary function.
 
@@ -29,9 +27,9 @@ def _l63(state: array_t, theta: array_t) -> array_t:
     sigma, rho, beta = theta
 
     # Lorenz equations.
-    d_state = array_t([sigma * (y - x),
-                       (rho - z) * x - y,
-                       x * y - beta * z])
+    d_state = np.array([sigma * (y - x),
+                        (rho - z) * x - y,
+                        x * y - beta * z])
     # Return d_state/dt.
     return d_state
 # _end_def_
@@ -44,12 +42,13 @@ class Lorenz63(StochasticProcess):
     https://en.wikipedia.org/wiki/Lorenz_system
     """
 
-    def __init__(self, sigma: array_t, theta: array_t, r_seed: int = None):
+    def __init__(self, sigma: np.ndarray, theta: np.ndarray,
+                 r_seed: int = None) -> None:
         """
         Default constructor of the L63 object.
 
-        :param sigma: (numpy array) noise diffusion coefficient. These
-        are diagonal elements (variances) from a full matrix.
+        :param sigma: (numpy array) noise diffusion coefficient.
+        These are diagonal elements (variances) from a full matrix.
 
         :param theta: (numpy array) drift model vector.
 
@@ -99,10 +98,10 @@ class Lorenz63(StochasticProcess):
 
         # Load the energy functions.
         self._load_functions()
-
     # _end_def_
 
-    def make_trajectory(self, t0: float, tf: float, dt: float = 0.01):
+    def make_trajectory(self, t0: float, tf: float,
+                        dt: float = 0.01) -> None:
         """
         Generates a realizations of the Lorenz63 (3D)
         dynamical system, within a specified time-window.

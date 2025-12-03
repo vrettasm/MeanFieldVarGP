@@ -1,5 +1,4 @@
 import numpy as np
-from numpy import array as array_t
 from numpy import squeeze
 from numpy.random import default_rng
 
@@ -23,7 +22,7 @@ class StochasticProcess(object):
     __slots__ = ("xt", "tk", "_rng", "_theta", "_sigma",
                  "Esde", "dEsde_dm", "dEsde_ds")
 
-    def __init__(self, r_seed: int = None):
+    def __init__(self, r_seed: int = None) -> None:
         """
         Default constructor of the StochasticProcess object.
 
@@ -57,13 +56,12 @@ class StochasticProcess(object):
     # _end_def_
 
     @property
-    def theta(self):
+    def theta(self) -> np.ndarray:
         """
         Accessor method (getter).
 
         :return: the drift parameter(s).
         """
-
         # Sanity check.
         if self._theta is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
@@ -74,7 +72,7 @@ class StochasticProcess(object):
     # _end_def_
 
     @theta.setter
-    def theta(self, new_value: array_t):
+    def theta(self, new_value: np.ndarray) -> None:
         """
         Accessor method (setter).
 
@@ -86,25 +84,21 @@ class StochasticProcess(object):
     # _end_def_
 
     @property
-    def sigma(self):
+    def sigma(self) -> np.ndarray:
         """
         Accessor method (getter).
 
         :return: the diffusion noise parameter.
         """
-
         # Sanity check.
         if self._sigma is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" SDE noise parameters have not set yet.")
-        # _end_if_
-
         return np.atleast_1d(self._sigma)
-
     # _end_def_
 
     @sigma.setter
-    def sigma(self, new_value: array_t):
+    def sigma(self, new_value: np.ndarray) -> None:
         """
         Accessor method (setter).
 
@@ -112,25 +106,19 @@ class StochasticProcess(object):
 
         :return: None.
         """
-
         # Make sure the input is array.
         new_value = np.asarray(new_value, dtype=float)
 
         # Check for positive definiteness.
-        if np.all(new_value > 0.0):
-
-            # Make the change.
-            self._sigma = new_value
-
-        else:
+        if np.any(new_value <= 0.0):
             raise ValueError(f" {self.__class__.__name__}:"
                              f" SDE noise vector {new_value} is not positive.")
-        # _end_if_
-
+        # Make the change.
+        self._sigma = new_value
     # _end_def_
 
     @property
-    def inverse_sigma(self):
+    def inverse_sigma(self) -> np.ndarray:
         """
         Accessor method (getter).
 
@@ -140,13 +128,12 @@ class StochasticProcess(object):
     # _end_def_
 
     @property
-    def sample_path(self):
+    def sample_path(self) -> np.ndarray:
         """
         Accessor method.
 
         :return: the sample path.
         """
-
         # Check if the sample path has been created.
         if self.xt is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
@@ -157,7 +144,7 @@ class StochasticProcess(object):
     # _end_def_
 
     @sample_path.setter
-    def sample_path(self, new_value):
+    def sample_path(self, new_value: np.ndarray) -> None:
         """
         Accessor method.
 
@@ -169,24 +156,21 @@ class StochasticProcess(object):
     # _end_def_
 
     @property
-    def time_window(self):
+    def time_window(self) -> np.ndarray:
         """
         Accessor method.
 
         :return: the time window of the path.
         """
-
         # Check if the time-window is created.
         if self.tk is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Time window has not been created.")
-        # _end_def_
-
         return self.tk
     # _end_def_
 
     @time_window.setter
-    def time_window(self, new_value):
+    def time_window(self, new_value: np.ndarray) -> None:
         """
         Accessor method.
 
@@ -198,7 +182,7 @@ class StochasticProcess(object):
     # _end_def_
 
     @property
-    def time_step(self):
+    def time_step(self) -> float:
         """
         Accessor method.
 
@@ -206,13 +190,10 @@ class StochasticProcess(object):
 
         NB: We assume the time-window is uniform.
         """
-
         # Check if the sample path has been created.
         if self.tk is None:
             raise NotImplementedError(f" {self.__class__.__name__}:"
                                       f" Time window has not been created.")
-        # _end_def_
-
         # Return the 'dt'.
         return np.abs(np.diff(self.tk)[0])
     # _end_def_
@@ -227,7 +208,7 @@ class StochasticProcess(object):
         return self._rng
     # _end_def_
 
-    def collect_obs(self, n_obs, h_mask=None):
+    def collect_obs(self, n_obs: int, h_mask=None):
         """
         This function collects a number of noise-free observations
         from the discrete sample path (trajectory). If the 'n_obs'
@@ -299,7 +280,6 @@ class StochasticProcess(object):
 
             # Make sure everything is int.
             obs_t = list(map(int, obs_t))
-
         # _end_if_
 
         # Extract the full observations (d = D) at times 'obs_t'.
@@ -316,7 +296,7 @@ class StochasticProcess(object):
         return obs_t, obs_y
     # _end_def_
 
-    def energy(self, t, *args):
+    def energy(self, t: float, *args) -> np.ndarray:
         """
         Wrapper method. This method wraps the lambdafied gradient
         function, (for each specific dynamical system) and passes
@@ -353,7 +333,7 @@ class StochasticProcess(object):
         """
 
         # Collect all the energy values.
-        energy_vec = array_t([eF_(t, *args) for eF_ in self.Esde])
+        energy_vec = np.array([eF_(t, *args) for eF_ in self.Esde])
 
         # Sanity check.
         if energy_vec.ndim > 1:
@@ -366,7 +346,7 @@ class StochasticProcess(object):
         return energy_vec
     # _end_def_
 
-    def grad_mean(self, t, *args):
+    def grad_mean(self, t: float, *args) -> np.ndarray:
         """
         Wrapper method. This method wraps the lambdafied gradient
         function, (for each specific dynamical system) and passes
@@ -403,7 +383,7 @@ class StochasticProcess(object):
         """
 
         # Collect all the (mean) gradient values.
-        grad_vec = array_t([gM_(t, *args) for gM_ in self.dEsde_dm])
+        grad_vec = np.array([gM_(t, *args) for gM_ in self.dEsde_dm])
 
         # Sanity check.
         if grad_vec.ndim > 2:
@@ -417,7 +397,7 @@ class StochasticProcess(object):
         return grad_vec
     # _end_def_
 
-    def grad_variance(self, t, *args):
+    def grad_variance(self, t: float, *args) -> np.ndarray:
         """
         Wrapper method. This method wraps the lambdafied gradient
         function, (for each specific dynamical system) and passes
@@ -452,9 +432,8 @@ class StochasticProcess(object):
 
         :return: dEsde_ds vector (3*dim_D,).
         """
-
         # Collect all the (variance) gradient values.
-        grad_vec = array_t([gS_(t, *args) for gS_ in self.dEsde_ds])
+        grad_vec = np.array([gS_(t, *args) for gS_ in self.dEsde_ds])
 
         # Sanity check.
         if grad_vec.ndim > 2:
