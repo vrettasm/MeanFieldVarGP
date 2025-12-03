@@ -1,7 +1,7 @@
 import unittest
 
 # Import custom code
-from dynamical_systems.double_well import DoubleWell
+from src.dynamical_systems.double_well import DoubleWell
 
 
 class TestDoubleWell(unittest.TestCase):
@@ -35,7 +35,7 @@ class TestDoubleWell(unittest.TestCase):
         """
 
         # Make sure they are equal (to seven decimals).
-        self.assertAlmostEqual(float(1.0/0.8),
+        self.assertAlmostEqual(float(1.0 / 0.8),
                                self.test_obj.inverse_sigma,
                                msg="Inverse Sigma method failed to 7 decimals.")
     # _end_def_
